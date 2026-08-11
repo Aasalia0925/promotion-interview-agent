@@ -460,17 +460,18 @@
     </div>
 
     <div class="field" id="apiKeyField">
-      <label class="field-label" for="apiKeyInput"><span class="idx">F.</span> Anthropic API 키 <span style="text-transform:none; letter-spacing:0; color:var(--ink-soft);">(이 파일을 다운로드해 직접 실행할 때만 필요)</span></label>
-      <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" />
+      <label class="field-label" for="apiKeyInput"><span class="idx">F.</span> OpenRouter API 키 <span style="text-transform:none; letter-spacing:0; color:var(--ink-soft);">(필수)</span></label>
+      <input type="password" id="apiKeyInput" placeholder="sk-or-v1-…" autocomplete="off" />
       <div class="file-row" style="margin-top:8px;">
         <label class="switch-label" style="cursor:pointer;">
           <input type="checkbox" id="rememberKey" style="width:auto; margin:0;" /> 이 브라우저에 저장
         </label>
       </div>
       <div class="field-hint">
-        console.anthropic.com/settings/keys 에서 발급받을 수 있습니다. 키는 이 브라우저에서 Anthropic API로만 직접 전송되며 그 외 어디로도 전송되지 않습니다.
+        openrouter.ai → Keys 메뉴에서 무료로 발급받을 수 있습니다(신용카드 불필요). 이 앱은 Google Gemma 4 31B(무료 모델)을 OpenRouter를 통해 호출합니다.
+        키는 이 브라우저에서 OpenRouter API로만 직접 전송되며 그 외 어디로도 전송되지 않습니다.
         <strong>이 파일을 다른 사람과 공유하거나 GitHub 등 공개 저장소에 올릴 때는 반드시 키를 지우고 올려주세요.</strong>
-        지금 Claude.ai 대화창 안의 미리보기로 사용 중이라면 비워둔 채로 진행해도 됩니다.
+        무료 모델은 분당 20회·하루 50회 요청 제한이 있습니다(OpenRouter 계정에 10달러 이상 충전한 적이 있으면 하루 1,000회로 늘어납니다).
       </div>
     </div>
 
@@ -518,7 +519,7 @@
     <div id="fbContent" style="display:none;"></div>
   </section>
 
-  <p class="footnote">이 면접은 연습용 시뮬레이션이며 실제 승진 결과를 보장하지 않습니다. 답변과 자료는 이 대화창 밖으로 전송되지 않습니다(음성 인식은 브라우저 자체 기능을 사용합니다).</p>
+  <p class="footnote">이 면접은 연습용 시뮬레이션이며 실제 승진 결과를 보장하지 않습니다. 입력하신 자료와 답변은 이 브라우저에서 OpenRouter를 거쳐 Google Gemma 4 31B(무료 모델)로 전송되어 처리됩니다. 무료 모델은 제공사의 데이터 정책에 따라 입력 내용이 모델 개선 등에 활용될 수 있으니, 민감한 개인정보는 되도록 줄여서 입력해 주세요. (음성 인식은 브라우저 자체 기능을 사용합니다.)</p>
 </div>
 
 <script>
@@ -808,9 +809,8 @@
   }
   el.autoSpeakToggle.addEventListener('change', (e)=>{ state.autoSpeak = e.target.checked; });
 
-  /* ---------------- API key storage (only used when NOT running inside the
-     Claude.ai preview, e.g. after downloading this file). Wrapped in
-     try/catch because localStorage throws inside some sandboxed previews. */
+  /* ---------------- OpenRouter API key storage. Wrapped in try/catch
+     because localStorage can throw inside some sandboxed previews. */
   const ls = (function(){
     try{
       const t = '__pia_test__';
@@ -846,44 +846,45 @@
   });
   function getApiKey(){ return (el.apiKeyInput.value || '').trim(); }
 
-  /* ---------------- Claude API ---------------- */
+  /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
+  const OPENROUTER_MODEL = 'google/gemma-4-31b-it:free';
   async function callClaude(systemPrompt, messages){
     const apiKey = getApiKey();
-    const headers = { 'Content-Type': 'application/json' };
-    if(apiKey){
-      // Needed for direct browser -> Anthropic API calls when this file is
-      // run standalone (no proxy). Not needed inside the Claude.ai preview.
-      headers['x-api-key'] = apiKey;
-      headers['anthropic-version'] = '2023-06-01';
-      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    if(!apiKey){
+      throw new Error('OpenRouter API 키가 필요합니다. "자료 준비" 탭의 F번 항목에 키를 입력해 주세요. (openrouter.ai에서 무료로 발급받을 수 있습니다)');
     }
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + apiKey,
+      'HTTP-Referer': location.href,   // OpenRouter uses this only for its own usage dashboard
+      'X-Title': '승진 심사 모의 면접'
+    };
+    const chatMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
     let res;
     try{
-      res = await fetch('https://api.anthropic.com/v1/messages', {
+      res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: 'claude-sonnet-4-6',
+          model: OPENROUTER_MODEL,
           max_tokens: 1000,
-          system: systemPrompt,
-          messages
+          messages: chatMessages
         })
       });
     } catch(networkErr){
-      throw new Error(apiKey
-        ? '네트워크 오류로 요청을 보내지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.'
-        : 'API에 연결하지 못했습니다. 이 파일을 다운로드해 직접 실행 중이라면 "자료 준비" 탭의 F번 항목에 Anthropic API 키를 입력해야 합니다.');
+      throw new Error('네트워크 오류로 요청을 보내지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
     }
     if(!res.ok){
       let detail = '';
       try{ const j = await res.json(); if(j && j.error && j.error.message) detail = ' — ' + j.error.message; } catch(e){}
+      if(res.status === 429) detail = detail || ' — 무료 모델의 요청 한도(분당 20회·하루 50회)를 초과했을 수 있습니다. 잠시 후 다시 시도해 주세요.';
       throw new Error('요청이 실패했습니다 (HTTP ' + res.status + ')' + detail);
     }
     const data = await res.json();
-    const textBlock = (data.content || []).find(b => b.type === 'text');
-    if(!textBlock) throw new Error('응답에서 텍스트를 찾지 못했습니다.');
-    return textBlock.text.trim();
+    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if(!content) throw new Error('응답에서 텍스트를 찾지 못했습니다.');
+    return content.trim();
   }
 
   function buildInterviewSystemPrompt(){
