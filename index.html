@@ -897,7 +897,13 @@
   });
 
   /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
-  const OPENROUTER_MODEL = 'google/gemma-4-31b-it:free';
+  // Free models are sometimes busy/rate-limited by their underlying provider.
+  // Listing several lets OpenRouter automatically try the next one on failure.
+  const OPENROUTER_MODELS = [
+    'google/gemma-4-31b-it:free',
+    'openai/gpt-oss-20b:free',
+    'nvidia/nemotron-nano-9b-v2:free'
+  ];
   async function callClaude(systemPrompt, messages){
     const apiKey = getApiKey();
     if(!apiKey){
@@ -915,7 +921,7 @@
         method: 'POST',
         headers,
         body: JSON.stringify({
-          model: OPENROUTER_MODEL,
+          models: OPENROUTER_MODELS,
           max_tokens: 1000,
           messages: chatMessages
         })
@@ -927,7 +933,7 @@
     if(!res.ok){
       let detail = '';
       try{ const j = await res.json(); if(j && j.error && j.error.message) detail = ' — ' + j.error.message; } catch(e){}
-      if(res.status === 429) detail = detail || ' — 무료 모델의 요청 한도(분당 20회·하루 50회)를 초과했을 수 있습니다. 잠시 후 다시 시도해 주세요.';
+      if(res.status === 429) detail = detail || ' — 무료 모델(들)이 지금 혼잡하거나 요청 한도(분당 20회·하루 50회)를 초과했을 수 있습니다. 잠시 후 다시 시도해 주세요.';
       throw new Error('요청이 실패했습니다 (HTTP ' + res.status + ')' + detail);
     }
     const data = await res.json();
