@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>승진 심사 모의 면접</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;600;700&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root{
+    --paper:#EDEFE5;
+    --paper-line:#CFD5C2;
+    --paper-deep:#E1E5D5;
+    --ink:#1E2A38;
+    --ink-soft:#5B6472;
+    --navy:#16233A;
+    --navy-soft:#24365A;
+    --brass:#A07A34;
+    --brass-soft:#C9A768;
+    --brass-pale:#F1E6C8;
+    --red-stamp:#9B3A31;
+    --red-pale:#F3DEDB;
+    --green-ok:#3C6E47;
+    --green-pale:#DEE9DF;
+    --white:#FBFAF6;
+    --shadow:0 1px 3px rgba(22,35,58,0.10);
+    --shadow-lg:0 8px 24px rgba(22,35,58,0.14);
+  }
+
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background:var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 32px;
+    background-attachment:local;
+    color:var(--ink);
+    font-family:'IBM Plex Sans KR', -apple-system, sans-serif;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";
+    position:fixed; inset:0;
+    background:var(--paper);
+    opacity:.55;
+    z-index:-1;
+  }
+
+  .app{ max-width:920px; margin:0 auto; padding:28px 18px 70px; }
+
+  button{ font-family:inherit; }
+  ::selection{ background:var(--brass-pale); }
+
+  a, button, input, textarea, select{
+    font-size:15px;
+  }
+  button:focus-visible, input:focus-visible, textarea:focus-visible,
+  select:focus-visible, [tabindex]:focus-visible{
+    outline:2px solid var(--brass);
+    outline-offset:2px;
+  }
+
+  /* ---------- Header ---------- */
+  .case-header{
+    background:var(--navy);
+    color:var(--white);
+    border-radius:12px 12px 0 0;
+    padding:22px 26px 20px;
+    position:relative;
+    box-shadow:var(--shadow);
+  }
+  .case-header::after{
+    content:"";
+    position:absolute; left:0; right:0; bottom:0;
+    height:3px;
+    background:linear-gradient(90deg, var(--brass) 0%, var(--brass-soft) 45%, transparent 100%);
+  }
+  .case-top-row{
+    display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;
+  }
+  .case-no{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--brass-soft);
+  }
+  .case-title{
+    font-family:'Noto Serif KR', serif;
+    font-weight:700;
+    font-size:23px;
+    margin:6px 0 3px;
+    letter-spacing:-.01em;
+  }
+  .case-sub{
+    font-size:13px;
+    color:#C7CEDB;
+  }
+  .status-cluster{
+    display:flex; align-items:center; gap:10px; flex-shrink:0;
+  }
+  .status-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.08em;
+    padding:6px 11px;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.22);
+    color:#E8EAF0;
+    display:flex; align-items:center; gap:6px;
+    white-space:nowrap;
+  }
+  .status-dot{ width:7px; height:7px; border-radius:50%; background:var(--ink-soft); }
+  .status-badge.live .status-dot{ background:var(--red-stamp); animation:blink 1.6s infinite; }
+  .status-badge.done .status-dot{ background:var(--green-ok); }
+  @keyframes blink{ 0%,100%{opacity:1;} 50%{opacity:.25;} }
+  .timer{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:13px;
+    color:#C7CEDB;
+    min-width:48px;
+    text-align:right;
+  }
+
+  /* ---------- Tabs ---------- */
+  .tabs{ display:flex; gap:5px; padding:0 4px; position:relative; z-index:2; }
+  .tab{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11.5px;
+    letter-spacing:.06em;
+    padding:11px 16px 10px;
+    background:var(--paper-deep);
+    border:1px solid var(--paper-line);
+    border-bottom:none;
+    border-radius:8px 8px 0 0;
+    color:var(--ink-soft);
+    cursor:pointer;
+    transform:translateY(4px);
+    transition:transform .15s ease, background .15s ease, color .15s ease;
+  }
+  .tab:hover:not(:disabled){ color:var(--ink); }
+  .tab:disabled{ opacity:.45; cursor:not-allowed; }
+  .tab.active{
+    background:var(--white);
+    color:var(--navy);
+    font-weight:600;
+    transform:translateY(0);
+  }
+
+  /* ---------- Panel ---------- */
+  .panel{
+    background:var(--white);
+    border:1px solid var(--paper-line);
+    border-radius:0 10px 10px 10px;
+    padding:30px;
+    box-shadow:var(--shadow);
+  }
+  .panel[hidden]{ display:none; }
+
+  .panel-intro{
+    font-size:13.5px;
+    color:var(--ink-soft);
+    line-height:1.6;
+    margin:0 0 26px;
+    padding-bottom:20px;
+    border-bottom:1px dashed var(--paper-line);
+  }
+
+  .field{ margin-bottom:24px; }
+  .field-label{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:11px;
+    letter-spacing:.1em;
+    text-transform:uppercase;
+    color:var(--brass);
+    margin-bottom:8px;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
+  }
+  .field-label .idx{ color:var(--ink-soft); }
+  .field-hint{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-top:6px;
+    line-height:1.5;
+  }
+  .field-hint.warn{ color:var(--red-stamp); }
+
+  input[type=text], textarea, select{
+    width:100%;
+    font-family:'IBM Plex Sans KR', sans-serif;
+    padding:11px 13px;
+    border:1px solid var(--paper-line);
+    border-radius:6px;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.5;
+  }
+  textarea{ min-height:150px; resize:vertical; }
+  input[type=text]::placeholder, textarea::placeholder{ color:#9AA2AC; }
+
+  .segmented{
+    display:flex; border:1px solid var(--paper-line); border-radius:8px; overflow:hidden;
+  }
+  .segmented button{
+    flex:1; padding:11px 8px; background:var(--paper);
+    border:none; border-right:1px solid var(--paper-line);
+    color:var(--ink-soft); cursor:pointer; font-size:13.5px;
+    transition:background .15s ease, color .15s ease;
+  }
+  .segmented button:last-child{ border-right:none; }
+  .segmented button.active{ background:var(--navy); color:var(--white); font-weight:600; }
+  .segmented button:hover:not(.active){ background:var(--paper-deep); }
+
+  .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:20px; }
+  @media (max-width:640px){ .row-2{ grid-template-columns:1fr; } }
+
+  .file-row{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+  .file-btn{
+    background:var(--paper); border:1px solid var(--paper-line); border-radius:6px;
+    padding:9px 14px; font-size:13.5px; color:var(--ink); cursor:pointer;
+  }
+  .file-btn:hover{ background:var(--paper-deep); }
+  .file-name{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--ink-soft); }
+
+  .btn-primary{
+    background:var(--brass); color:var(--white); font-weight:700;
+    border:none; padding:14px 24px; border-radius:7px; font-size:15px;
+    cursor:pointer; letter-spacing:.01em; transition:background .15s ease, transform .08s ease;
+  }
+  .btn-primary:hover:not(:disabled){ background:#8E6B2C; }
+  .btn-primary:active:not(:disabled){ transform:translateY(1px); }
+  .btn-primary:disabled{ opacity:.45; cursor:not-allowed; }
+
+  .btn-secondary{
+    background:transparent; border:1px solid var(--paper-line); color:var(--ink);
+    padding:12px 18px; border-radius:7px; cursor:pointer; font-size:14px;
+  }
+  .btn-secondary:hover{ background:var(--paper-deep); }
+
+  .btn-ghost{
+    background:none; border:none; color:var(--ink-soft); text-decoration:underline;
+    cursor:pointer; font-size:13px; padding:4px;
+  }
+
+  /* ---------- Interview panel ---------- */
+  .interview-toolbar{
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;
+    margin-bottom:16px;
+  }
+  .meta-chips{ display:flex; gap:8px; flex-wrap:wrap; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.05em;
+    text-transform:uppercase; padding:5px 10px; border-radius:20px;
+    background:var(--brass-pale); color:#7A5A22; border:1px solid #E4D3A2;
+  }
+  .toggle-row{ display:flex; align-items:center; gap:16px; }
+  .switch-label{
+    display:flex; align-items:center; gap:7px; font-size:12.5px; color:var(--ink-soft); cursor:pointer;
+    user-select:none;
+  }
+  .switch{
+    width:34px; height:19px; border-radius:20px; background:var(--paper-line);
+    position:relative; transition:background .15s ease; flex-shrink:0;
+  }
+  .switch::after{
+    content:""; position:absolute; top:2px; left:2px; width:15px; height:15px; border-radius:50%;
+    background:var(--white); transition:transform .15s ease;
+  }
+  input.switch-input{ display:none; }
+  input.switch-input:checked + .switch{ background:var(--green-ok); }
+  input.switch-input:checked + .switch::after{ transform:translateX(15px); }
+
+  .transcript{
+    background-image:repeating-linear-gradient(to bottom, transparent, transparent 30px, var(--paper-line) 31px);
+    background-color:var(--paper);
+    border:1px solid var(--paper-line);
+    border-radius:8px;
+    max-height:440px;
+    overflow-y:auto;
+    padding:18px 18px 18px 76px;
+    position:relative;
+  }
+  .transcript-empty{
+    color:var(--ink-soft); font-size:13.5px; text-align:center; padding:40px 10px;
+  }
+  .msg{ position:relative; margin-bottom:20px; }
+  .msg:last-child{ margin-bottom:2px; }
+  .msg .time{
+    position:absolute; left:-62px; top:1px; width:50px; text-align:right;
+    font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft);
+  }
+  .msg .speaker{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; letter-spacing:.08em;
+    text-transform:uppercase; margin-bottom:4px;
+  }
+  .msg.interviewer .speaker{ color:var(--brass); }
+  .msg.candidate .speaker{ color:var(--navy-soft); }
+  .msg .text{ font-size:14.5px; line-height:1.68; white-space:pre-wrap; }
+  .msg.interviewer .text{ font-family:'Noto Serif KR', serif; font-weight:500; color:var(--ink); }
+  .msg.candidate .text{ color:var(--ink); }
+  .msg.system .text{ color:var(--ink-soft); font-size:13px; font-style:italic; }
+  .msg.error .text{ color:var(--red-stamp); }
+
+  .typing-dots{ display:inline-flex; gap:4px; padding:2px 0; }
+  .typing-dots span{
+    width:6px; height:6px; border-radius:50%; background:var(--brass-soft);
+    animation:dotPulse 1.2s infinite ease-in-out;
+  }
+  .typing-dots span:nth-child(2){ animation-delay:.15s; }
+  .typing-dots span:nth-child(3){ animation-delay:.3s; }
+  @keyframes dotPulse{ 0%,80%,100%{ opacity:.25; transform:translateY(0);} 40%{ opacity:1; transform:translateY(-3px);} }
+
+  .controls{ display:flex; gap:10px; margin-top:16px; align-items:flex-end; }
+  #answerInput{ flex:1; min-height:54px; max-height:150px; }
+  .mic-btn{
+    width:52px; height:52px; border-radius:50%; border:2px solid var(--navy);
+    background:var(--white); cursor:pointer; display:flex; align-items:center; justify-content:center;
+    flex-shrink:0; transition:background .15s ease, border-color .15s ease;
+  }
+  .mic-btn:hover{ background:var(--paper-deep); }
+  .mic-btn.recording{ background:var(--red-stamp); border-color:var(--red-stamp); animation:pulseRing 1.4s infinite; }
+  .mic-btn:disabled{ opacity:.35; cursor:not-allowed; }
+  @keyframes pulseRing{
+    0%{ box-shadow:0 0 0 0 rgba(155,58,49,.45); }
+    70%{ box-shadow:0 0 0 13px rgba(155,58,49,0); }
+    100%{ box-shadow:0 0 0 0 rgba(155,58,49,0); }
+  }
+  @media (prefers-reduced-motion: reduce){
+    .mic-btn.recording, .status-badge.live .status-dot, .typing-dots span{ animation:none; }
+  }
+
+  .send-btn{
+    width:52px; height:52px; border-radius:50%; border:none; background:var(--brass);
+    color:var(--white); cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;
+    transition:background .15s ease;
+  }
+  .send-btn:hover:not(:disabled){ background:#8E6B2C; }
+  .send-btn:disabled{ opacity:.4; cursor:not-allowed; }
+
+  .voice-note{ font-size:12px; color:var(--ink-soft); margin-top:10px; }
+
+  .end-row{ display:flex; justify-content:flex-end; margin-top:18px; }
+
+  /* ---------- Feedback panel ---------- */
+  .fb-loading{ text-align:center; padding:50px 10px; color:var(--ink-soft); }
+  .fb-loading .typing-dots{ justify-content:center; margin-top:14px; }
+  .fb-section{ margin-bottom:26px; }
+  .fb-heading{
+    font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:.1em;
+    text-transform:uppercase; margin-bottom:10px; display:flex; align-items:center; gap:8px;
+  }
+  .fb-heading.strength{ color:var(--green-ok); }
+  .fb-heading.improve{ color:var(--red-stamp); }
+  .fb-list{ margin:0; padding-left:0; list-style:none; }
+  .fb-list li{
+    position:relative; padding:9px 14px 9px 34px; margin-bottom:6px; border-radius:6px; font-size:14px; line-height:1.55;
+  }
+  .fb-list.strength li{ background:var(--green-pale); }
+  .fb-list.improve li{ background:var(--red-pale); }
+  .fb-list li::before{
+    position:absolute; left:12px; top:9px; font-family:'IBM Plex Mono', monospace; font-size:12px; font-weight:600;
+  }
+  .fb-list.strength li::before{ content:"+"; color:var(--green-ok); }
+  .fb-list.improve li::before{ content:"–"; color:var(--red-stamp); }
+  .fb-overall{
+    border-left:3px solid var(--brass); background:var(--brass-pale); padding:14px 18px;
+    font-size:14.5px; line-height:1.7; border-radius:0 6px 6px 0; color:#5C4520;
+  }
+  .fb-tips{ margin:0; padding-left:0; counter-reset:tip; list-style:none; }
+  .fb-tips li{
+    counter-increment:tip; position:relative; padding:9px 14px 9px 36px; margin-bottom:6px;
+    background:var(--paper); border-radius:6px; font-size:14px; line-height:1.55;
+  }
+  .fb-tips li::before{
+    content:counter(tip); position:absolute; left:12px; top:9px;
+    font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--brass); font-weight:600;
+  }
+  .fb-actions{ display:flex; gap:10px; margin-top:28px; flex-wrap:wrap; }
+  .fb-raw{ white-space:pre-wrap; font-size:13.5px; line-height:1.7; color:var(--ink-soft); }
+
+  .footnote{
+    text-align:center; font-size:12px; color:var(--ink-soft); margin-top:22px; line-height:1.6;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="case-header">
+    <div class="case-top-row">
+      <div>
+        <div class="case-no" id="caseNo">ENGAGEMENT NO. —</div>
+        <div class="case-title">승진 심사 모의 면접</div>
+        <div class="case-sub">회계법인 파트너 패널 시뮬레이션</div>
+      </div>
+      <div class="status-cluster">
+        <span class="timer" id="timerDisplay">00:00</span>
+        <span class="status-badge" id="statusBadge"><span class="status-dot"></span><span id="statusText">자료 준비 중</span></span>
+      </div>
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" id="tabBtn-setup" role="tab" aria-selected="true">01 자료 준비</button>
+    <button class="tab" id="tabBtn-interview" role="tab" aria-selected="false" disabled>02 모의 면접</button>
+    <button class="tab" id="tabBtn-feedback" role="tab" aria-selected="false" disabled>03 피드백</button>
+  </nav>
+
+  <!-- ===== Panel 1: Setup ===== -->
+  <section class="panel" id="panel-setup">
+    <p class="panel-intro">
+      승진 대상 직급과 참고 자료를 입력하면, 회계법인 파트너 패널을 맡은 AI가 실제 승진 심사처럼 질문을 진행합니다.
+      자기소개서, 실적 요약, 회사의 승진 평가 기준 등을 함께 붙여넣을수록 질문이 더 구체적이고 실전에 가까워집니다.
+    </p>
+
+    <div class="field">
+      <label class="field-label" for="targetRole"><span class="idx">A.</span> 승진 심사 대상 직급</label>
+      <input type="text" id="targetRole" placeholder="예: 시니어매니저 → 파트너" />
+      <div class="field-hint warn" id="targetRoleWarn" style="display:none;">진행하려면 대상 직급을 입력해 주세요.</div>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label class="field-label"><span class="idx">B.</span> 면접 스타일</label>
+        <div class="segmented" id="styleSelect">
+          <button data-value="pressure">압박형</button>
+          <button data-value="balanced" class="active">균형형</button>
+          <button data-value="coaching">코칭형</button>
+        </div>
+        <div class="field-hint">면접 도중에도 언제든 바꿀 수 있습니다.</div>
+      </div>
+      <div class="field">
+        <label class="field-label"><span class="idx">C.</span> 패널 구성</label>
+        <div class="segmented" id="panelSelect">
+          <button data-value="single">파트너 1인</button>
+          <button data-value="panel" class="active">파트너 패널 (3인)</button>
+        </div>
+        <div class="field-hint">패널은 돌아가며 질문하는 방식으로 진행됩니다.</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="idx">D.</span> 참고 자료</label>
+      <textarea id="materials" placeholder="자기소개서, 주요 실적/프로젝트, 회사의 승진 평가 기준, 최근 고과 코멘트 등을 자유롭게 붙여넣어 주세요."></textarea>
+      <div class="file-row" style="margin-top:10px;">
+        <button class="file-btn" id="fileBtn" type="button">파일에서 불러오기 (.txt, .md)</button>
+        <input type="file" id="fileInput" accept=".txt,.md,text/plain" style="display:none;" />
+        <span class="file-name" id="fileName"></span>
+      </div>
+      <div class="field-hint" id="fileNote">PDF·Word 파일은 아직 직접 불러올 수 없어요. 내용을 복사해 위 텍스트 상자에 붙여넣어 주시면 동일하게 활용됩니다. 자료가 없다면 비워둔 채로 진행해도 괜찮습니다 — 일반적인 회계법인 승진 기준으로 면접을 구성합니다.</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label"><span class="idx">E.</span> 추가 컨텍스트 <span style="text-transform:none; letter-spacing:0; color:var(--ink-soft);">(선택)</span></label>
+      <input type="text" id="extraContext" placeholder="예: Big4 감사본부, 클라이언트는 주로 제조업, 이번이 두 번째 승진 도전 등" />
+    </div>
+
+    <div class="field" id="apiKeyField">
+      <label class="field-label" for="apiKeyInput"><span class="idx">F.</span> Anthropic API 키 <span style="text-transform:none; letter-spacing:0; color:var(--ink-soft);">(이 파일을 다운로드해 직접 실행할 때만 필요)</span></label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-…" autocomplete="off" />
+      <div class="file-row" style="margin-top:8px;">
+        <label class="switch-label" style="cursor:pointer;">
+          <input type="checkbox" id="rememberKey" style="width:auto; margin:0;" /> 이 브라우저에 저장
+        </label>
+      </div>
+      <div class="field-hint">
+        console.anthropic.com/settings/keys 에서 발급받을 수 있습니다. 키는 이 브라우저에서 Anthropic API로만 직접 전송되며 그 외 어디로도 전송되지 않습니다.
+        <strong>이 파일을 다른 사람과 공유하거나 GitHub 등 공개 저장소에 올릴 때는 반드시 키를 지우고 올려주세요.</strong>
+        지금 Claude.ai 대화창 안의 미리보기로 사용 중이라면 비워둔 채로 진행해도 됩니다.
+      </div>
+    </div>
+
+    <button class="btn-primary" id="startBtn">면접 시작</button>
+  </section>
+
+  <!-- ===== Panel 2: Interview ===== -->
+  <section class="panel" id="panel-interview" hidden>
+    <div class="interview-toolbar">
+      <div class="meta-chips" id="metaChips"></div>
+      <div class="toggle-row">
+        <label class="switch-label">
+          <input type="checkbox" class="switch-input" id="autoSpeakToggle" checked />
+          <span class="switch"></span> 질문 음성으로 듣기
+        </label>
+      </div>
+    </div>
+
+    <div class="transcript" id="transcript" aria-live="polite">
+      <div class="transcript-empty" id="transcriptEmpty">면접을 준비하고 있습니다…</div>
+    </div>
+
+    <div class="controls">
+      <button class="mic-btn" id="micBtn" type="button" aria-pressed="false" title="음성으로 답변">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" id="micIcon"><path d="M12 15a3 3 0 0 0 3-3V6a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3Z" stroke="currentColor" stroke-width="1.8"/><path d="M19 11a7 7 0 0 1-14 0M12 18v3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      </button>
+      <textarea id="answerInput" placeholder="답변을 입력하세요 (Shift+Enter로 줄바꿈, Enter로 전송)"></textarea>
+      <button class="send-btn" id="sendBtn" type="button" title="전송">
+        <svg width="19" height="19" viewBox="0 0 24 24" fill="none"><path d="M4 12l16-8-6 16-3-7-7-1Z" stroke="white" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <div class="voice-note" id="voiceNote"></div>
+
+    <div class="end-row">
+      <button class="btn-secondary" id="endBtn">면접 종료하고 피드백 받기</button>
+    </div>
+  </section>
+
+  <!-- ===== Panel 3: Feedback ===== -->
+  <section class="panel" id="panel-feedback" hidden>
+    <div id="fbLoading" class="fb-loading">
+      <div>심사위원회가 평가를 정리하고 있습니다…</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div id="fbContent" style="display:none;"></div>
+  </section>
+
+  <p class="footnote">이 면접은 연습용 시뮬레이션이며 실제 승진 결과를 보장하지 않습니다. 답변과 자료는 이 대화창 밖으로 전송되지 않습니다(음성 인식은 브라우저 자체 기능을 사용합니다).</p>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------------- State ---------------- */
+  const state = {
+    phase: 'setup',
+    targetRole: '',
+    style: 'balanced',
+    panelSize: 'panel',
+    materials: '',
+    extraContext: '',
+    voiceSupported: false,
+    autoSpeak: true,
+    isRecording: false,
+    isSending: false,
+    transcript: [],
+    startTime: null,
+    feedback: null,
+    lastFailedAnswer: null
+  };
+
+  const styleLabel = { pressure:'압박형', balanced:'균형형', coaching:'코칭형' };
+  const panelLabel = { single:'파트너 1인', panel:'파트너 패널(3인)' };
+
+  const styleDesc = {
+    pressure: '날카롭고 도전적인 질문을 이어가며 답변의 허점이나 모순을 파고듭니다. 다만 인신공격이나 무례한 표현은 쓰지 않습니다.',
+    balanced: '사실적이고 예리하지만 공정하게 질문하며, 필요하면 후보자가 생각을 정리할 짧은 여유를 줍니다.',
+    coaching: '우호적인 어조를 유지하며, 답변이 부족하면 힌트를 주듯 질문을 다시 던지고 격려합니다.'
+  };
+  const panelDesc = {
+    single: '한 명의 파트너가 단독으로 면접을 진행합니다.',
+    panel: '3인으로 구성된 파트너 승진 심사위원회이며, 위원들을 대표해 한 번에 한 명씩 돌아가며 질문합니다. 필요하면 "OOO 파트너입니다" 식으로 화자를 짧게 밝혀도 좋습니다.'
+  };
+
+  /* ---------------- DOM refs ---------------- */
+  const $ = (id) => document.getElementById(id);
+  const el = {
+    caseNo: $('caseNo'), timer: $('timerDisplay'), statusBadge: $('statusBadge'), statusText: $('statusText'),
+    tabSetup: $('tabBtn-setup'), tabInterview: $('tabBtn-interview'), tabFeedback: $('tabBtn-feedback'),
+    panelSetup: $('panel-setup'), panelInterview: $('panel-interview'), panelFeedback: $('panel-feedback'),
+    targetRole: $('targetRole'), targetRoleWarn: $('targetRoleWarn'),
+    styleSelect: $('styleSelect'), panelSelect: $('panelSelect'),
+    materials: $('materials'), fileBtn: $('fileBtn'), fileInput: $('fileInput'), fileName: $('fileName'), fileNote: $('fileNote'),
+    extraContext: $('extraContext'), startBtn: $('startBtn'),
+    apiKeyInput: $('apiKeyInput'), rememberKey: $('rememberKey'),
+    metaChips: $('metaChips'), autoSpeakToggle: $('autoSpeakToggle'),
+    transcript: $('transcript'), transcriptEmpty: $('transcriptEmpty'),
+    micBtn: $('micBtn'), answerInput: $('answerInput'), sendBtn: $('sendBtn'), voiceNote: $('voiceNote'),
+    endBtn: $('endBtn'),
+    fbLoading: $('fbLoading'), fbContent: $('fbContent')
+  };
+
+  /* ---------------- Init header ---------------- */
+  (function initCaseNo(){
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth()+1).padStart(2,'0');
+    const d = String(now.getDate()).padStart(2,'0');
+    const rand = String(Math.floor(100 + Math.random()*900));
+    el.caseNo.textContent = `ENGAGEMENT NO. ${y}-${m}${d}-${rand}`;
+  })();
+
+  /* ---------------- Tabs ---------------- */
+  const unlocked = { setup:true, interview:false, feedback:false };
+  function setPhase(phase){
+    state.phase = phase;
+    if(phase==='interview') unlocked.interview = true;
+    if(phase==='feedback') unlocked.feedback = true;
+    render();
+  }
+  function goTab(name){
+    if(!unlocked[name]) return;
+    [['setup', el.panelSetup, el.tabSetup], ['interview', el.panelInterview, el.tabInterview], ['feedback', el.panelFeedback, el.tabFeedback]]
+      .forEach(([key, panel, tab])=>{
+        const active = key===name;
+        panel.hidden = !active;
+        tab.classList.toggle('active', active);
+        tab.setAttribute('aria-selected', active ? 'true':'false');
+      });
+  }
+  el.tabSetup.addEventListener('click', ()=>goTab('setup'));
+  el.tabInterview.addEventListener('click', ()=>goTab('interview'));
+  el.tabFeedback.addEventListener('click', ()=>goTab('feedback'));
+
+  function render(){
+    el.tabInterview.disabled = !unlocked.interview;
+    el.tabFeedback.disabled = !unlocked.feedback;
+    if(state.phase==='setup') goTab('setup');
+    if(state.phase==='interview') goTab('interview');
+    if(state.phase==='feedback') goTab('feedback');
+
+    if(state.phase==='setup'){
+      el.statusBadge.className = 'status-badge';
+      el.statusText.textContent = '자료 준비 중';
+    } else if(state.phase==='interview'){
+      el.statusBadge.className = 'status-badge live';
+      el.statusText.textContent = '면접 진행 중';
+    } else {
+      el.statusBadge.className = 'status-badge done';
+      el.statusText.textContent = '면접 종료';
+    }
+
+    el.metaChips.innerHTML = '';
+    [state.targetRole || '직급 미설정', styleLabel[state.style], panelLabel[state.panelSize]].forEach(t=>{
+      const c = document.createElement('span');
+      c.className = 'chip';
+      c.textContent = t;
+      el.metaChips.appendChild(c);
+    });
+  }
+
+  /* ---------------- Timer ---------------- */
+  let timerHandle = null;
+  function startTimer(){
+    state.startTime = Date.now();
+    timerHandle = setInterval(()=>{
+      const secs = Math.floor((Date.now()-state.startTime)/1000);
+      const mm = String(Math.floor(secs/60)).padStart(2,'0');
+      const ss = String(secs%60).padStart(2,'0');
+      el.timer.textContent = `${mm}:${ss}`;
+    }, 1000);
+  }
+  function stopTimer(){ if(timerHandle) clearInterval(timerHandle); }
+
+  /* ---------------- Setup panel interactions ---------------- */
+  function segmented(container, onPick){
+    container.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button');
+      if(!btn) return;
+      [...container.children].forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      onPick(btn.dataset.value);
+    });
+  }
+  segmented(el.styleSelect, (v)=>{ state.style = v; render(); });
+  segmented(el.panelSelect, (v)=>{ state.panelSize = v; render(); });
+
+  el.fileBtn.addEventListener('click', ()=> el.fileInput.click());
+  el.fileInput.addEventListener('change', async (e)=>{
+    const file = e.target.files[0];
+    if(!file) return;
+    if(!/\.(txt|md)$/i.test(file.name)){
+      el.fileNote.textContent = '지금은 .txt, .md 파일만 바로 불러올 수 있습니다. 다른 형식은 내용을 복사해 텍스트 상자에 붙여넣어 주세요.';
+      el.fileNote.classList.add('warn');
+      return;
+    }
+    try{
+      const text = await file.text();
+      el.materials.value += (el.materials.value ? '\n\n' : '') + `[첨부: ${file.name}]\n` + text;
+      el.fileName.textContent = file.name;
+      el.fileNote.textContent = `${file.name}의 내용을 자료란에 추가했습니다. 필요하면 자유롭게 수정하세요.`;
+      el.fileNote.classList.remove('warn');
+    } catch(err){
+      el.fileNote.textContent = '파일을 읽는 중 문제가 발생했습니다. 내용을 복사해 직접 붙여넣어 주세요.';
+      el.fileNote.classList.add('warn');
+    }
+  });
+
+  el.startBtn.addEventListener('click', startInterview);
+
+  /* ---------------- Speech: recognition & synthesis ---------------- */
+  let recognition = null;
+  let voiceBaseText = '';   // text already in the field before this recording session
+  let voiceFinalText = '';  // finalized transcript accumulated during this session
+  const isEmbedded = (function(){ try{ return window.self !== window.top; } catch(e){ return true; } })();
+
+  function setupSpeech(){
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if(!SR){
+      state.voiceSupported = false;
+      el.micBtn.disabled = true;
+      el.voiceNote.textContent = '이 브라우저는 음성 인식을 지원하지 않습니다. 텍스트로 답변해 주세요. (Chrome, Edge 브라우저에서 음성 기능을 이용할 수 있습니다)';
+      return;
+    }
+    if(!(location.protocol === 'https:' || location.hostname === 'localhost' || location.protocol === 'file:')){
+      state.voiceSupported = false;
+      el.micBtn.disabled = true;
+      el.voiceNote.textContent = '음성 인식은 HTTPS(또는 로컬) 환경에서만 동작합니다. HTTPS로 배포한 뒤 다시 시도해 주세요.';
+      return;
+    }
+    state.voiceSupported = true;
+    recognition = new SR();
+    recognition.lang = 'ko-KR';
+    recognition.continuous = true;      // don't auto-stop on a short pause mid-answer
+    recognition.interimResults = true;
+
+    recognition.onresult = (e)=>{
+      let interim = '';
+      for(let i = e.resultIndex; i < e.results.length; i++){
+        const chunk = e.results[i][0].transcript;
+        if(e.results[i].isFinal) voiceFinalText += chunk;
+        else interim += chunk;
+      }
+      el.answerInput.value = (voiceBaseText + voiceFinalText + interim).trim();
+    };
+    recognition.onerror = (e)=>{
+      console.error('SpeechRecognition error:', e.error, e.message || '');
+      handleRecognitionError(e.error);
+    };
+    recognition.onend = ()=>{
+      // Fires both when we stop it ourselves and when the browser ends the
+      // session on its own (silence timeout, tab backgrounded, etc.).
+      if(state.isRecording) stopRecording();
+    };
+  }
+
+  function handleRecognitionError(code){
+    stopRecording();
+    if(code === 'aborted') return; // we caused this ourselves; no need to alarm the user
+
+    const embedNote = isEmbedded
+      ? ' 지금처럼 미리보기(임베디드) 화면에서는 마이크 권한이 구조적으로 차단될 수 있습니다 — 파일을 다운로드해 브라우저에서 직접 열거나, GitHub Pages 등에 배포한 뒤 다시 시도해 보세요.'
+      : '';
+    const messages = {
+      'not-allowed': '마이크 권한이 차단되어 있습니다. 브라우저 주소창의 마이크/자물쇠 아이콘에서 권한을 허용해 주세요.' + embedNote,
+      'permission-denied': '마이크 권한이 거부되었습니다. 브라우저 설정에서 권한을 허용한 뒤 다시 시도해 주세요.' + embedNote,
+      'service-not-allowed': '브라우저 또는 보안 정책이 음성 인식 서비스를 차단했습니다.' + embedNote,
+      'audio-capture': '마이크를 찾을 수 없습니다. 마이크가 연결·활성화되어 있는지 확인해 주세요.',
+      'no-speech': '음성이 감지되지 않았습니다. 마이크에 조금 더 가까이서 다시 말씀해 주세요.',
+      'network': '네트워크 문제로 음성 인식에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+    };
+    el.voiceNote.textContent = messages[code] || ('음성 인식 중 오류가 발생했습니다' + (code ? ` (${code})` : '') + '. 텍스트로 입력해 주세요.');
+  }
+
+  async function startRecording(){
+    if(!state.voiceSupported || state.isRecording) return;
+
+    // Ask for the microphone explicitly first. This surfaces a clear,
+    // consistent permission error before handing off to the recognition
+    // service, whose own error reporting varies a lot across browsers.
+    if(navigator.mediaDevices && navigator.mediaDevices.getUserMedia){
+      el.voiceNote.textContent = '마이크 권한을 확인하는 중…';
+      try{
+        const stream = await navigator.mediaDevices.getUserMedia({ audio:true });
+        stream.getTracks().forEach(t=>t.stop());
+      } catch(permErr){
+        handleRecognitionError(
+          permErr.name === 'NotAllowedError' ? 'not-allowed' :
+          permErr.name === 'NotFoundError' ? 'audio-capture' : permErr.name
+        );
+        return;
+      }
+    }
+
+    voiceBaseText = el.answerInput.value ? el.answerInput.value.trim() + ' ' : '';
+    voiceFinalText = '';
+    state.isRecording = true;
+    el.micBtn.classList.add('recording');
+    el.micBtn.setAttribute('aria-pressed','true');
+    el.voiceNote.textContent = '듣고 있습니다… 다시 누르면 녹음을 멈춥니다.';
+    try{
+      recognition.start();
+    } catch(err){
+      console.error('recognition.start() failed:', err);
+      state.isRecording = false;
+      el.micBtn.classList.remove('recording');
+      el.voiceNote.textContent = '음성 인식을 시작하지 못했습니다. 다시 눌러 주세요.';
+    }
+  }
+  function stopRecording(){
+    state.isRecording = false;
+    el.micBtn.classList.remove('recording');
+    el.micBtn.setAttribute('aria-pressed','false');
+    if(el.voiceNote.textContent.startsWith('듣고') || el.voiceNote.textContent.startsWith('마이크 권한을 확인')){
+      el.voiceNote.textContent = '답변 내용을 확인한 뒤 전송을 눌러주세요.';
+    }
+    try{ recognition.stop(); } catch(err){}
+  }
+  el.micBtn.addEventListener('click', ()=>{
+    if(state.isRecording) stopRecording(); else startRecording();
+  });
+
+  function speak(text){
+    if(!state.autoSpeak || !('speechSynthesis' in window)) return;
+    try{
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'ko-KR';
+      const voices = window.speechSynthesis.getVoices();
+      const krVoice = voices.find(v=>v.lang && v.lang.toLowerCase().startsWith('ko'));
+      if(krVoice) utter.voice = krVoice;
+      window.speechSynthesis.speak(utter);
+    } catch(err){ /* ignore TTS failure */ }
+  }
+  el.autoSpeakToggle.addEventListener('change', (e)=>{ state.autoSpeak = e.target.checked; });
+
+  /* ---------------- API key storage (only used when NOT running inside the
+     Claude.ai preview, e.g. after downloading this file). Wrapped in
+     try/catch because localStorage throws inside some sandboxed previews. */
+  const ls = (function(){
+    try{
+      const t = '__pia_test__';
+      window.localStorage.setItem(t, '1');
+      window.localStorage.removeItem(t);
+      return window.localStorage;
+    } catch(e){ return null; }
+  })();
+  (function loadStoredKey(){
+    if(!ls) return;
+    try{
+      if(ls.getItem('pia_remember_key') === '1'){
+        el.apiKeyInput.value = ls.getItem('pia_api_key') || '';
+        el.rememberKey.checked = true;
+      }
+    } catch(e){}
+  })();
+  el.rememberKey.addEventListener('change', ()=>{
+    if(!ls) return;
+    try{
+      if(el.rememberKey.checked){
+        ls.setItem('pia_remember_key', '1');
+        ls.setItem('pia_api_key', el.apiKeyInput.value);
+      } else {
+        ls.removeItem('pia_remember_key');
+        ls.removeItem('pia_api_key');
+      }
+    } catch(e){}
+  });
+  el.apiKeyInput.addEventListener('input', ()=>{
+    if(!ls || !el.rememberKey.checked) return;
+    try{ ls.setItem('pia_api_key', el.apiKeyInput.value); } catch(e){}
+  });
+  function getApiKey(){ return (el.apiKeyInput.value || '').trim(); }
+
+  /* ---------------- Claude API ---------------- */
+  async function callClaude(systemPrompt, messages){
+    const apiKey = getApiKey();
+    const headers = { 'Content-Type': 'application/json' };
+    if(apiKey){
+      // Needed for direct browser -> Anthropic API calls when this file is
+      // run standalone (no proxy). Not needed inside the Claude.ai preview.
+      headers['x-api-key'] = apiKey;
+      headers['anthropic-version'] = '2023-06-01';
+      headers['anthropic-dangerous-direct-browser-access'] = 'true';
+    }
+
+    let res;
+    try{
+      res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          model: 'claude-sonnet-4-6',
+          max_tokens: 1000,
+          system: systemPrompt,
+          messages
+        })
+      });
+    } catch(networkErr){
+      throw new Error(apiKey
+        ? '네트워크 오류로 요청을 보내지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.'
+        : 'API에 연결하지 못했습니다. 이 파일을 다운로드해 직접 실행 중이라면 "자료 준비" 탭의 F번 항목에 Anthropic API 키를 입력해야 합니다.');
+    }
+    if(!res.ok){
+      let detail = '';
+      try{ const j = await res.json(); if(j && j.error && j.error.message) detail = ' — ' + j.error.message; } catch(e){}
+      throw new Error('요청이 실패했습니다 (HTTP ' + res.status + ')' + detail);
+    }
+    const data = await res.json();
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if(!textBlock) throw new Error('응답에서 텍스트를 찾지 못했습니다.');
+    return textBlock.text.trim();
+  }
+
+  function buildInterviewSystemPrompt(){
+    const materials = state.materials.trim() || '(제공된 자료 없음 — 일반적인 회계법인 승진 심사 기준으로 진행)';
+    const extra = state.extraContext.trim() ? `\n[추가 컨텍스트]\n${state.extraContext.trim()}\n` : '';
+    return [
+      '당신은 회계법인의 승진 심사위원회 역할을 맡아 실제 승진 인터뷰처럼 한국어 존댓말로 대화를 진행합니다.',
+      '',
+      `[승진 심사 대상 직급]\n${state.targetRole}`,
+      '',
+      `[패널 구성]\n${panelDesc[state.panelSize]}`,
+      '',
+      `[면접 스타일]\n${styleDesc[state.style]}`,
+      '',
+      `[참고 자료 - 후보자의 자기소개서/실적/평가 기준 등]\n${materials}`,
+      extra,
+      '[행동 지침]',
+      '1. 한 번에 하나의 질문만 하십시오. 여러 질문을 나열하지 마세요.',
+      '2. 후보자의 답변을 실제로 반영해 자연스럽게 꼬리 질문을 이어가거나 다음 주제로 넘어가세요.',
+      '3. 리더십 경험, 클라이언트 관리와 신뢰 구축, 매출·수익 기여, 팀 빌딩/멘토링, 위기 대응, 전문성, 향후 비전과 회사 기여 계획, 어려운 의사결정 경험 등 실제 회계법인 승진 인터뷰에서 다뤄지는 주제를 폭넓게 포함하세요.',
+      '4. 참고 자료에 있는 구체적인 내용(프로젝트명, 실적, 경력 등)을 실제로 언급하며 질문해 실전감을 높이세요.',
+      '5. 질문 외의 부가 설명, 지문, 메타 코멘트, 괄호 안 연출 묘사는 출력하지 마세요. 오직 파트너가 실제로 할 법한 말만 출력하세요.',
+      '6. 대화가 충분히 진행되어 8~10개 정도의 핵심 질문을 다뤘다면, 자연스럽게 면접을 마무리하는 멘트를 하세요.',
+      '7. 첫 메시지에서는 인사와 함께 첫 번째 질문을 바로 시작하세요.'
+    ].join('\n');
+  }
+
+  function transcriptToMessages(){
+    return state.transcript
+      .filter(m => m.speaker === 'interviewer' || m.speaker === 'candidate')
+      .map(m => ({ role: m.speaker === 'interviewer' ? 'assistant' : 'user', content: m.text }));
+  }
+
+  /* ---------------- Transcript rendering ---------------- */
+  function fmtTime(d){
+    return d.toLocaleTimeString('ko-KR', { hour12:false, hour:'2-digit', minute:'2-digit', second:'2-digit' });
+  }
+  function addMessage(speaker, text){
+    const entry = { speaker, text, time: new Date() };
+    state.transcript.push(entry);
+    renderTranscriptAppend(entry);
+    return entry;
+  }
+  function renderTranscriptAppend(entry){
+    if(el.transcriptEmpty) el.transcriptEmpty.remove();
+    const row = document.createElement('div');
+    row.className = 'msg ' + entry.speaker;
+    const speakerLabel = entry.speaker === 'interviewer' ? '심사위원회' : entry.speaker === 'candidate' ? '나' : entry.speaker === 'error' ? '오류' : '안내';
+    row.innerHTML = `
+      <div class="time">${fmtTime(entry.time)}</div>
+      <div class="speaker">${speakerLabel}</div>
+      <div class="text"></div>
+    `;
+    row.querySelector('.text').textContent = entry.text;
+    el.transcript.appendChild(row);
+    el.transcript.scrollTop = el.transcript.scrollHeight;
+    return row;
+  }
+  let typingRow = null;
+  function showTyping(){
+    typingRow = document.createElement('div');
+    typingRow.className = 'msg interviewer';
+    typingRow.innerHTML = `
+      <div class="time">${fmtTime(new Date())}</div>
+      <div class="speaker">심사위원회</div>
+      <div class="text"><span class="typing-dots"><span></span><span></span><span></span></span></div>
+    `;
+    el.transcript.appendChild(typingRow);
+    el.transcript.scrollTop = el.transcript.scrollHeight;
+  }
+  function hideTyping(){ if(typingRow){ typingRow.remove(); typingRow = null; } }
+
+  /* ---------------- Flow: start / send / end ---------------- */
+  async function startInterview(){
+    const role = el.targetRole.value.trim();
+    if(!role){
+      el.targetRoleWarn.style.display = 'block';
+      el.targetRole.focus();
+      return;
+    }
+    el.targetRoleWarn.style.display = 'none';
+    state.targetRole = role;
+    state.materials = el.materials.value;
+    state.extraContext = el.extraContext.value;
+
+    el.startBtn.disabled = true;
+    el.startBtn.textContent = '면접 준비 중…';
+
+    setPhase('interview');
+    startTimer();
+    setupSpeech();
+    render();
+
+    showTyping();
+    try{
+      const reply = await callClaude(buildInterviewSystemPrompt(), [
+        { role:'user', content:'(면접을 시작해 주세요.)' }
+      ]);
+      hideTyping();
+      const entry = addMessage('interviewer', reply);
+      speak(entry.text);
+    } catch(err){
+      hideTyping();
+      addMessage('error', '면접을 시작하지 못했습니다: ' + err.message + ' — 아래에서 다시 시도해 주세요.');
+    } finally {
+      el.startBtn.disabled = false;
+      el.startBtn.textContent = '면접 시작';
+    }
+  }
+
+  async function sendAnswer(){
+    const text = el.answerInput.value.trim();
+    if(!text || state.isSending) return;
+    if(state.isRecording) stopRecording();
+
+    addMessage('candidate', text);
+    el.answerInput.value = '';
+    el.voiceNote.textContent = '';
+    state.isSending = true;
+    el.sendBtn.disabled = true;
+    showTyping();
+
+    try{
+      const reply = await callClaude(buildInterviewSystemPrompt(), transcriptToMessages());
+      hideTyping();
+      const entry = addMessage('interviewer', reply);
+      speak(entry.text);
+      state.lastFailedAnswer = null;
+    } catch(err){
+      hideTyping();
+      state.lastFailedAnswer = text;
+      addMessage('error', '응답을 받지 못했습니다: ' + err.message + ' — 아래 입력창에서 다시 전송해 보세요.');
+    } finally {
+      state.isSending = false;
+      el.sendBtn.disabled = false;
+      el.answerInput.focus();
+    }
+  }
+  el.sendBtn.addEventListener('click', sendAnswer);
+  el.answerInput.addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && !e.shiftKey){
+      e.preventDefault();
+      sendAnswer();
+    }
+  });
+
+  el.endBtn.addEventListener('click', endInterview);
+
+  async function endInterview(){
+    if(state.transcript.filter(m=>m.speaker==='candidate').length === 0){
+      const ok = confirm('아직 답변을 하지 않았습니다. 그래도 면접을 종료할까요?');
+      if(!ok) return;
+    }
+    stopTimer();
+    if(state.isRecording) stopRecording();
+    window.speechSynthesis && window.speechSynthesis.cancel();
+    setPhase('feedback');
+    render();
+
+    el.fbLoading.style.display = 'block';
+    el.fbContent.style.display = 'none';
+
+    const transcriptText = state.transcript
+      .filter(m => m.speaker==='interviewer' || m.speaker==='candidate')
+      .map(m => `${m.speaker==='interviewer' ? '심사위원' : '후보자'}: ${m.text}`)
+      .join('\n\n');
+
+    const feedbackPrompt = [
+      '아래는 회계법인 승진 인터뷰 모의연습의 전체 대화 기록입니다. 승진 심사위원 관점에서 후보자의 답변을 평가하고 피드백을 작성하세요.',
+      '',
+      `[승진 심사 대상 직급]\n${state.targetRole}`,
+      '',
+      `[면접 스타일]\n${styleLabel[state.style]}`,
+      '',
+      '[대화 기록]',
+      transcriptText || '(대화 기록 없음)',
+      '',
+      '아래 JSON 형식으로만, 다른 설명 없이 응답하세요:',
+      '{"strengths":["...","..."],"improvements":["...","..."],"overall":"3~4문장의 종합 평가","tips":["실전 팁 1","실전 팁 2","실전 팁 3"]}'
+    ].join('\n');
+
+    try{
+      const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만 응답하십시오.', [
+        { role:'user', content: feedbackPrompt }
+      ]);
+      renderFeedback(raw);
+    } catch(err){
+      el.fbLoading.style.display = 'none';
+      el.fbContent.style.display = 'block';
+      el.fbContent.innerHTML = `<p class="fb-heading improve">피드백 생성 실패</p><p class="fb-raw">${escapeHtml(err.message)}</p>`;
+      appendResetActions();
+    }
+  }
+
+  function escapeHtml(str){
+    const d = document.createElement('div');
+    d.textContent = str;
+    return d.innerHTML;
+  }
+
+  function renderFeedback(raw){
+    el.fbLoading.style.display = 'none';
+    el.fbContent.style.display = 'block';
+
+    let parsed = null;
+    try{
+      const cleaned = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
+      parsed = JSON.parse(cleaned);
+    } catch(err){ parsed = null; }
+
+    if(!parsed || (!parsed.strengths && !parsed.improvements)){
+      el.fbContent.innerHTML = `<div class="fb-section"><div class="fb-heading">종합 피드백</div><div class="fb-raw"></div></div>`;
+      el.fbContent.querySelector('.fb-raw').textContent = raw;
+      appendResetActions();
+      return;
+    }
+    state.feedback = parsed;
+
+    const strengthsHtml = (parsed.strengths||[]).map(s=>`<li></li>`).join('');
+    const improvementsHtml = (parsed.improvements||[]).map(s=>`<li></li>`).join('');
+    const tipsHtml = (parsed.tips||[]).map(s=>`<li></li>`).join('');
+
+    el.fbContent.innerHTML = `
+      <div class="fb-section">
+        <div class="fb-heading strength">잘한 점</div>
+        <ul class="fb-list strength">${strengthsHtml}</ul>
+      </div>
+      <div class="fb-section">
+        <div class="fb-heading improve">보완이 필요한 점</div>
+        <ul class="fb-list improve">${improvementsHtml}</ul>
+      </div>
+      <div class="fb-section">
+        <div class="fb-heading">종합 평가</div>
+        <div class="fb-overall"></div>
+      </div>
+      <div class="fb-section">
+        <div class="fb-heading">실전 팁</div>
+        <ol class="fb-tips">${tipsHtml}</ol>
+      </div>
+    `;
+    // fill text content safely (avoid HTML injection from API output)
+    [...el.fbContent.querySelectorAll('.fb-list.strength li')].forEach((li,i)=> li.textContent = (parsed.strengths||[])[i] || '');
+    [...el.fbContent.querySelectorAll('.fb-list.improve li')].forEach((li,i)=> li.textContent = (parsed.improvements||[])[i] || '');
+    [...el.fbContent.querySelectorAll('.fb-tips li')].forEach((li,i)=> li.textContent = (parsed.tips||[])[i] || '');
+    el.fbContent.querySelector('.fb-overall').textContent = parsed.overall || '';
+
+    appendResetActions();
+  }
+
+  function appendResetActions(){
+    const actions = document.createElement('div');
+    actions.className = 'fb-actions';
+    actions.innerHTML = `
+      <button class="btn-primary" id="retryBtn">다시 연습하기</button>
+      <button class="btn-secondary" id="copyBtn">면접 기록 + 피드백 복사</button>
+    `;
+    el.fbContent.appendChild(actions);
+    document.getElementById('retryBtn').addEventListener('click', resetToSetup);
+    document.getElementById('copyBtn').addEventListener('click', copyTranscript);
+  }
+
+  function resetToSetup(){
+    state.transcript = [];
+    state.feedback = null;
+    state.lastFailedAnswer = null;
+    unlocked.interview = false;
+    unlocked.feedback = false;
+    el.transcript.innerHTML = '<div class="transcript-empty" id="transcriptEmpty">면접을 준비하고 있습니다…</div>';
+    el.transcriptEmpty = document.getElementById('transcriptEmpty');
+    el.timer.textContent = '00:00';
+    setPhase('setup');
+  }
+
+  function copyTranscript(){
+    const lines = state.transcript
+      .filter(m => m.speaker==='interviewer' || m.speaker==='candidate')
+      .map(m => `[${fmtTime(m.time)}] ${m.speaker==='interviewer'?'심사위원':'나'}: ${m.text}`);
+    let out = `승진 심사 모의 면접 기록\n대상 직급: ${state.targetRole}\n\n` + lines.join('\n\n');
+    if(state.feedback){
+      out += '\n\n--- 피드백 ---\n';
+      out += '잘한 점:\n' + (state.feedback.strengths||[]).map(s=>'- '+s).join('\n');
+      out += '\n\n보완할 점:\n' + (state.feedback.improvements||[]).map(s=>'- '+s).join('\n');
+      out += '\n\n종합 평가:\n' + (state.feedback.overall||'');
+      out += '\n\n실전 팁:\n' + (state.feedback.tips||[]).map(s=>'- '+s).join('\n');
+    }
+    navigator.clipboard.writeText(out).then(()=>{
+      const btn = document.getElementById('copyBtn');
+      if(btn){ const orig = btn.textContent; btn.textContent = '복사되었습니다'; setTimeout(()=>btn.textContent=orig, 1800); }
+    }).catch(()=>{ alert('클립보드 복사에 실패했습니다.'); });
+  }
+
+  /* ---------------- Boot ---------------- */
+  render();
+})();
+</script>
+</body>
+</html>
