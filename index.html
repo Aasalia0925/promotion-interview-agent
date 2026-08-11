@@ -905,9 +905,7 @@
     }
     const headers = {
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + apiKey,
-      'HTTP-Referer': location.href,   // OpenRouter uses this only for its own usage dashboard
-      'X-Title': '승진 심사 모의 면접'
+      'Authorization': 'Bearer ' + apiKey
     };
     const chatMessages = [{ role: 'system', content: systemPrompt }, ...messages];
 
@@ -923,7 +921,8 @@
         })
       });
     } catch(networkErr){
-      throw new Error('네트워크 오류로 요청을 보내지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');
+      console.error('OpenRouter fetch failed:', networkErr);
+      throw new Error('네트워크 오류로 요청을 보내지 못했습니다. 인터넷 연결을 확인한 뒤 다시 시도해 주세요. (계속되면 광고 차단/보안 확장 프로그램을 잠시 꺼보세요)');
     }
     if(!res.ok){
       let detail = '';
