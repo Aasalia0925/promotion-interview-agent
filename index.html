@@ -451,7 +451,7 @@
         <input type="file" id="fileInput" accept=".txt,.md,text/plain" style="display:none;" />
         <span class="file-name" id="fileName"></span>
       </div>
-      <div class="field-hint" id="fileNote">PDF·Word 파일은 아직 직접 불러올 수 없어요. 내용을 복사해 위 텍스트 상자에 붙여넣어 주시면 동일하게 활용됩니다. 자료가 없다면 비워둔 채로 진행해도 괜찮습니다 — 일반적인 회계법인 승진 기준으로 면접을 구성합니다. 매번 붙여넣기 귀찮다면, 저장소에 <code>materials.txt</code> 파일을 만들어두면 방문할 때마다 자동으로 이 칸에 채워집니다.</div>
+      <div class="field-hint" id="fileNote">PDF·Word 파일은 아직 직접 불러올 수 없어요. 내용을 복사해 위 텍스트 상자에 붙여넣어 주시면 동일하게 활용됩니다. 자료가 없다면 비워둔 채로 진행해도 괜찮습니다 — 일반적인 회계법인 승진 기준으로 면접을 구성합니다.</div>
     </div>
 
     <div class="field">
@@ -588,29 +588,6 @@
     const d = String(now.getDate()).padStart(2,'0');
     const rand = String(Math.floor(100 + Math.random()*900));
     el.caseNo.textContent = `ENGAGEMENT NO. ${y}-${m}${d}-${rand}`;
-  })();
-
-  /* ---------------- Auto-load reference materials from materials.txt ----------------
-     If a materials.txt file sits next to this index.html (same folder, e.g. in the
-     GitHub repo), its content is loaded into the "참고 자료" box automatically on
-     every visit. Update that one file whenever your resume/실적/평가 기준이 바뀌면
-     되고, 매번 붙여넣지 않아도 됩니다. This only works when the page is served over
-     http(s) (e.g. GitHub Pages) — opening the file directly (file://) usually blocks
-     this fetch, in which case manual paste/upload still works exactly as before. */
-  (async function autoLoadMaterials(){
-    try{
-      const res = await fetch('./materials.txt', { cache: 'no-store' });
-      if(!res.ok) return;
-      const text = await res.text();
-      if(text.trim()){
-        el.materials.value = text;
-        el.fileNote.textContent = 'materials.txt 파일 내용을 자동으로 불러왔습니다. 이번만 다르게 하고 싶으면 아래 내용을 직접 수정한 뒤 진행해도 됩니다.';
-        el.fileNote.classList.remove('warn');
-      }
-    } catch(err){
-      // materials.txt가 없거나(정상), file://로 직접 열어서 fetch가 막힌 경우 —
-      // 조용히 무시하고 기존처럼 수동 입력/업로드를 쓰면 됩니다.
-    }
   })();
 
   /* ---------------- Tabs ---------------- */
