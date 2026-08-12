@@ -876,14 +876,13 @@
   /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
   // Free models are sometimes busy/rate-limited by their underlying provider.
   // Listing several lets OpenRouter automatically try the next one on failure.
-  // Gemma is listed twice on purpose: it has the strongest Korean output of
-  // the free options here, so a transient failure retries it once more
-  // before falling back to models with weaker Korean fluency.
+  // OpenRouter allows at most 3 entries here. Gemma is listed twice on
+  // purpose — it has the strongest Korean output of the free options — so a
+  // transient failure retries it once more before falling back to Nemotron.
   const OPENROUTER_MODELS = [
     'google/gemma-4-31b-it:free',
     'google/gemma-4-31b-it:free',
-    'nvidia/nemotron-nano-9b-v2:free',
-    'openai/gpt-oss-20b:free'
+    'nvidia/nemotron-nano-9b-v2:free'
   ];
 
   // Crude heuristic: a proper Korean reply should have a healthy amount of
