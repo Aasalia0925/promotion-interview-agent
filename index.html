@@ -1133,7 +1133,10 @@
     window.speechSynthesis && window.speechSynthesis.cancel();
     setPhase('feedback');
     render();
+    await generateFeedback();
+  }
 
+  async function generateFeedback(){
     el.fbLoading.style.display = 'block';
     el.fbContent.style.display = 'none';
 
@@ -1154,14 +1157,14 @@
       '[대화 기록]',
       transcriptText || '(대화 기록 없음)',
       '',
-      '아래 JSON 형식으로만, 다른 설명 없이 응답하세요. modelAnswers는 대화 기록에 나온 질문 중 가장 중요하거나 어려웠던 3~4개를 골라, 그 질문의 원문(question)과 후보자의 참고 자료·상황을 반영한 모범 답안 예시(modelAnswer, 3~5문장의 자연스러운 한국어 구어체 존댓말)를 작성하세요:',
+      '중요: 반드시 하나의 완전한 JSON 객체만 출력하고, 그 앞이나 뒤에 어떤 설명·코드블록 표시(```)도 붙이지 마십시오. JSON이 중간에 잘리지 않도록 각 항목을 간결하게 작성하십시오. modelAnswers는 대화 기록에 나온 질문 중 가장 중요하거나 어려웠던 최대 3개만 골라, 그 질문의 원문(question)과 후보자의 참고 자료·상황을 반영한 모범 답안 예시(modelAnswer, 2~4문장의 자연스러운 한국어 구어체 존댓말)를 작성하세요. 아래 형식 그대로 키 이름을 지켜서 응답하세요:',
       '{"strengths":["...","..."],"improvements":["...","..."],"overall":"3~4문장의 종합 평가","tips":["실전 팁 1","실전 팁 2","실전 팁 3"],"modelAnswers":[{"question":"면접에서 나온 질문","modelAnswer":"그 질문에 대한 모범 답안 예시"}]}'
     ].join('\n');
 
     try{
-      const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만 응답하십시오. JSON의 모든 문자열 값은 자연스러운 한국어(존댓말)로만 작성하고, 영어 단어나 문장을 섞지 마십시오.', [
+      const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만, 다른 텍스트나 코드블록 표시 없이 응답하십시오. JSON의 모든 문자열 값은 자연스러운 한국어(존댓말)로만 작성하고, 영어 단어나 문장을 섞지 마십시오.', [
         { role:'user', content: feedbackPrompt }
-      ], 2400);
+      ], 3200);
       renderFeedback(raw);
     } catch(err){
       el.fbLoading.style.display = 'none';
@@ -1177,6 +1180,15 @@
     return d.innerHTML;
   }
 
+  // Pulls out the JSON object from a model reply even if it added stray
+  // text or code-fence markers around it (despite being asked not to).
+  function extractJsonObject(raw){
+    const start = raw.indexOf('{');
+    const end = raw.lastIndexOf('}');
+    if(start === -1 || end === -1 || end < start) return null;
+    return raw.slice(start, end + 1);
+  }
+
   function renderFeedback(raw){
     el.fbLoading.style.display = 'none';
     el.fbContent.style.display = 'block';
@@ -1185,11 +1197,34 @@
     try{
       const cleaned = raw.replace(/```json/gi,'').replace(/```/g,'').trim();
       parsed = JSON.parse(cleaned);
-    } catch(err){ parsed = null; }
+    } catch(err){
+      // Fall back to pulling out just the {...} portion, in case the model
+      // added stray text around it or the fence-stripped string still had
+      // something odd at the very start/end.
+      const extracted = extractJsonObject(raw);
+      if(extracted){
+        try{ parsed = JSON.parse(extracted); } catch(err2){ parsed = null; }
+      }
+    }
 
     if(!parsed || (!parsed.strengths && !parsed.improvements)){
-      el.fbContent.innerHTML = `<div class="fb-section"><div class="fb-heading">종합 피드백</div><div class="fb-raw"></div></div>`;
+      el.fbContent.innerHTML = `
+        <div class="fb-section">
+          <div class="fb-heading improve">피드백 형식을 읽지 못했습니다</div>
+          <p style="font-size:13.5px; color:var(--ink-soft); line-height:1.6;">
+            응답이 완성되지 못했거나 형식이 어긋났습니다. 대화 내용은 그대로 남아있으니, 피드백만 다시 생성해볼 수 있습니다.
+          </p>
+        </div>
+        <div class="fb-section">
+          <button class="btn-primary" id="retryFeedbackBtn" type="button">피드백 다시 생성</button>
+        </div>
+        <div class="fb-section">
+          <div class="fb-heading">원본 응답 (참고용)</div>
+          <div class="fb-raw"></div>
+        </div>
+      `;
       el.fbContent.querySelector('.fb-raw').textContent = raw;
+      document.getElementById('retryFeedbackBtn').addEventListener('click', generateFeedback);
       appendResetActions();
       return;
     }
