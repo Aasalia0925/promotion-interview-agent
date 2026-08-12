@@ -474,7 +474,7 @@
         <button type="button" class="btn-ghost" id="copyKeyLinkBtn" style="margin-left:auto;">키 포함된 바로가기 링크 복사</button>
       </div>
       <div class="field-hint">
-        openrouter.ai → Keys 메뉴에서 무료로 발급받을 수 있습니다(신용카드 불필요). 이 앱은 Google Gemma 4 31B(무료 모델)을 OpenRouter를 통해 호출합니다.
+        openrouter.ai → Keys 메뉴에서 무료로 발급받을 수 있습니다(신용카드 불필요). 이 앱은 한국어에 특화된 Upstage: Solar Pro 3(무료 모델)을 우선 사용하고, 필요시 Google Gemma로 자동 대체합니다(둘 다 OpenRouter를 통해 호출).
         키는 이 브라우저에서 OpenRouter API로만 직접 전송되며 그 외 어디로도 전송되지 않습니다.
         <strong>이 파일을 다른 사람과 공유하거나 GitHub 등 공개 저장소에 올릴 때는 반드시 키를 지우고 올려주세요.</strong>
         무료 모델은 분당 20회·하루 50회 요청 제한이 있습니다(OpenRouter 계정에 10달러 이상 충전한 적이 있으면 하루 1,000회로 늘어납니다).
@@ -529,7 +529,7 @@
     <div id="fbContent" style="display:none;"></div>
   </section>
 
-  <p class="footnote">이 면접은 연습용 시뮬레이션이며 실제 승진 결과를 보장하지 않습니다. 입력하신 자료와 답변은 이 브라우저에서 OpenRouter를 거쳐 Google Gemma 4 31B(무료 모델)로 전송되어 처리됩니다. 무료 모델은 제공사의 데이터 정책에 따라 입력 내용이 모델 개선 등에 활용될 수 있으니, 민감한 개인정보는 되도록 줄여서 입력해 주세요. (음성 인식은 브라우저 자체 기능을 사용합니다.)</p>
+  <p class="footnote">이 면접은 연습용 시뮬레이션이며 실제 승진 결과를 보장하지 않습니다. 입력하신 자료와 답변은 이 브라우저에서 OpenRouter를 거쳐 Upstage Solar Pro 3 또는 Google Gemma(둘 다 무료 모델)로 전송되어 처리됩니다. 무료 모델은 제공사의 데이터 정책에 따라 입력 내용이 모델 개선 등에 활용될 수 있으니, 민감한 개인정보는 되도록 줄여서 입력해 주세요. (음성 인식은 브라우저 자체 기능을 사용합니다.)</p>
 </div>
 
 <script>
@@ -878,16 +878,17 @@
     });
   });
 
-  /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
-  // Free models are sometimes busy/rate-limited by their underlying provider.
-  // Listing several lets OpenRouter automatically try the next one on failure.
-  // OpenRouter allows at most 3 entries here. Gemma is listed twice on
-  // purpose — it has the strongest Korean output of the free options — so a
-  // transient failure retries it once more before falling back to Nemotron.
+  /* ---------------- AI model call (via OpenRouter -> Upstage: Solar Pro 3 free) ---------------- */
+  // Upstage is a Korean AI company; Solar Pro 3 uses a Korean-oversampled
+  // tokenizer and training set, so it's noticeably more reliable in Korean
+  // than general multilingual free models. It's listed twice so a transient
+  // failure retries it before falling back to Gemma (second-best Korean
+  // output among the free options tried so far).
+  // OpenRouter allows at most 3 entries in this list.
   const OPENROUTER_MODELS = [
-    'google/gemma-4-31b-it:free',
-    'google/gemma-4-31b-it:free',
-    'nvidia/nemotron-nano-9b-v2:free'
+    'upstage/solar-pro-3:free',
+    'upstage/solar-pro-3:free',
+    'google/gemma-4-31b-it:free'
   ];
 
   // Crude heuristic: a proper Korean reply should have a healthy amount of
