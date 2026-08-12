@@ -876,10 +876,11 @@
   /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
   // Free models are sometimes busy/rate-limited by their underlying provider.
   // Listing several lets OpenRouter automatically try the next one on failure.
+  // Ordered with speed in mind: fast fallback second, the slowest model last.
   const OPENROUTER_MODELS = [
     'google/gemma-4-31b-it:free',
-    'openai/gpt-oss-20b:free',
-    'nvidia/nemotron-nano-9b-v2:free'
+    'nvidia/nemotron-nano-9b-v2:free',
+    'openai/gpt-oss-20b:free'
   ];
   async function callClaude(systemPrompt, messages){
     const apiKey = getApiKey();
@@ -899,7 +900,11 @@
         headers,
         body: JSON.stringify({
           models: OPENROUTER_MODELS,
-          max_tokens: 1000,
+          // Some free models (e.g. reasoning-style ones) spend part of the
+          // token budget on an internal reasoning trace before the final
+          // answer. A higher ceiling avoids that trace crowding out the
+          // actual response, which used to surface as an empty reply.
+          max_tokens: 1800,
           messages: chatMessages
         })
       });
@@ -914,8 +919,15 @@
       throw new Error('요청이 실패했습니다 (HTTP ' + res.status + ')' + detail);
     }
     const data = await res.json();
-    const content = data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
-    if(!content) throw new Error('응답에서 텍스트를 찾지 못했습니다.');
+    const choice = data.choices && data.choices[0];
+    const content = choice && choice.message && choice.message.content;
+    if(!content){
+      console.error('Empty content from OpenRouter:', data);
+      const reason = choice && choice.finish_reason;
+      throw new Error(reason === 'length'
+        ? '모델이 답변을 끝맺기 전에 토큰 한도에 도달했습니다. 다시 시도해 주세요.'
+        : '응답에서 텍스트를 찾지 못했습니다. 다른 무료 모델이 잠시 불안정할 수 있습니다 — 다시 시도해 주세요.');
+    }
     return content.trim();
   }
 
