@@ -419,8 +419,13 @@
 
     <div class="field">
       <label class="field-label" for="targetRole"><span class="idx">A.</span> 승진 심사 대상 직급</label>
-      <input type="text" id="targetRole" placeholder="예: 시니어매니저 → 파트너" />
-      <div class="field-hint warn" id="targetRoleWarn" style="display:none;">진행하려면 대상 직급을 입력해 주세요.</div>
+      <select id="targetRole">
+        <option value="" disabled selected>선택하세요</option>
+        <option value="Manager → Senior Manager">Manager → Senior Manager</option>
+        <option value="Senior Manager → Director">Senior Manager → Director</option>
+        <option value="Director → Senior Director">Director → Senior Director</option>
+      </select>
+      <div class="field-hint warn" id="targetRoleWarn" style="display:none;">진행하려면 대상 직급을 선택해 주세요.</div>
     </div>
 
     <div class="row-2">
