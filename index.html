@@ -382,6 +382,25 @@
   .fb-actions{ display:flex; gap:10px; margin-top:28px; flex-wrap:wrap; }
   .fb-raw{ white-space:pre-wrap; font-size:13.5px; line-height:1.7; color:var(--ink-soft); }
 
+  .fb-qa{ display:flex; flex-direction:column; gap:14px; }
+  .fb-qa-item{
+    border:1px solid var(--paper-line); border-radius:8px; overflow:hidden; background:var(--white);
+  }
+  .fb-qa-q{
+    background:var(--navy); color:var(--white); padding:10px 16px; font-size:13.5px; line-height:1.55;
+  }
+  .fb-qa-q .fb-qa-label{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--brass-soft); display:block; margin-bottom:3px;
+  }
+  .fb-qa-a{
+    padding:12px 16px; font-size:14px; line-height:1.65; background:var(--green-pale); color:#234C2C;
+  }
+  .fb-qa-a .fb-qa-label{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--green-ok); display:block; margin-bottom:5px;
+  }
+
   .footnote{
     text-align:center; font-size:12px; color:var(--ink-soft); margin-top:22px; line-height:1.6;
   }
@@ -885,7 +904,7 @@
 
   function sleep(ms){ return new Promise(resolve => setTimeout(resolve, ms)); }
 
-  async function callModelOnce(systemPrompt, messages){
+  async function callModelOnce(systemPrompt, messages, maxTokens){
     const apiKey = getApiKey();
     if(!apiKey){
       throw new Error('Anthropic API 키가 필요합니다. "자료 준비" 탭의 F번 항목에 키를 입력해 주세요. (console.anthropic.com에서 발급받을 수 있습니다)');
@@ -907,7 +926,7 @@
         headers,
         body: JSON.stringify({
           model: ANTHROPIC_MODEL,
-          max_tokens: 1500,
+          max_tokens: maxTokens || 1500,
           system: systemPrompt,
           messages
         })
@@ -936,21 +955,21 @@
 
   // One short delay-and-retry on 429 (brief traffic spikes resolve quickly)
   // before giving up and surfacing an error to the person.
-  async function callModelWithRetry(systemPrompt, messages){
+  async function callModelWithRetry(systemPrompt, messages, maxTokens){
     try{
-      return await callModelOnce(systemPrompt, messages);
+      return await callModelOnce(systemPrompt, messages, maxTokens);
     } catch(err){
       if(err.status === 429){
         console.warn('429 from Anthropic, waiting 4s before one retry...');
         await sleep(4000);
-        return await callModelOnce(systemPrompt, messages);
+        return await callModelOnce(systemPrompt, messages, maxTokens);
       }
       throw err;
     }
   }
 
-  async function callClaude(systemPrompt, messages){
-    return await callModelWithRetry(systemPrompt, messages);
+  async function callClaude(systemPrompt, messages, maxTokens){
+    return await callModelWithRetry(systemPrompt, messages, maxTokens);
   }
 
   function buildInterviewSystemPrompt(){
@@ -1130,17 +1149,19 @@
       '',
       `[면접 스타일]\n${styleLabel[state.style]}`,
       '',
+      `[후보자의 참고 자료 - 모범 답안 작성 시 이 내용을 최대한 반영하세요]\n${state.materials.trim() || '(제공된 자료 없음)'}`,
+      '',
       '[대화 기록]',
       transcriptText || '(대화 기록 없음)',
       '',
-      '아래 JSON 형식으로만, 다른 설명 없이 응답하세요:',
-      '{"strengths":["...","..."],"improvements":["...","..."],"overall":"3~4문장의 종합 평가","tips":["실전 팁 1","실전 팁 2","실전 팁 3"]}'
+      '아래 JSON 형식으로만, 다른 설명 없이 응답하세요. modelAnswers는 대화 기록에 나온 질문 중 가장 중요하거나 어려웠던 3~4개를 골라, 그 질문의 원문(question)과 후보자의 참고 자료·상황을 반영한 모범 답안 예시(modelAnswer, 3~5문장의 자연스러운 한국어 구어체 존댓말)를 작성하세요:',
+      '{"strengths":["...","..."],"improvements":["...","..."],"overall":"3~4문장의 종합 평가","tips":["실전 팁 1","실전 팁 2","실전 팁 3"],"modelAnswers":[{"question":"면접에서 나온 질문","modelAnswer":"그 질문에 대한 모범 답안 예시"}]}'
     ].join('\n');
 
     try{
       const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만 응답하십시오. JSON의 모든 문자열 값은 자연스러운 한국어(존댓말)로만 작성하고, 영어 단어나 문장을 섞지 마십시오.', [
         { role:'user', content: feedbackPrompt }
-      ]);
+      ], 2400);
       renderFeedback(raw);
     } catch(err){
       el.fbLoading.style.display = 'none';
@@ -1177,6 +1198,13 @@
     const strengthsHtml = (parsed.strengths||[]).map(s=>`<li></li>`).join('');
     const improvementsHtml = (parsed.improvements||[]).map(s=>`<li></li>`).join('');
     const tipsHtml = (parsed.tips||[]).map(s=>`<li></li>`).join('');
+    const modelAnswers = Array.isArray(parsed.modelAnswers) ? parsed.modelAnswers : [];
+    const qaHtml = modelAnswers.map(()=>`
+      <div class="fb-qa-item">
+        <div class="fb-qa-q"><span class="fb-qa-label">질문</span><span class="fb-qa-q-text"></span></div>
+        <div class="fb-qa-a"><span class="fb-qa-label">모범 답안 예시</span><span class="fb-qa-a-text"></span></div>
+      </div>
+    `).join('');
 
     el.fbContent.innerHTML = `
       <div class="fb-section">
@@ -1195,12 +1223,19 @@
         <div class="fb-heading">실전 팁</div>
         <ol class="fb-tips">${tipsHtml}</ol>
       </div>
+      ${modelAnswers.length ? `
+      <div class="fb-section">
+        <div class="fb-heading">주요 질문 모범 답안</div>
+        <div class="fb-qa">${qaHtml}</div>
+      </div>` : ''}
     `;
     // fill text content safely (avoid HTML injection from API output)
     [...el.fbContent.querySelectorAll('.fb-list.strength li')].forEach((li,i)=> li.textContent = (parsed.strengths||[])[i] || '');
     [...el.fbContent.querySelectorAll('.fb-list.improve li')].forEach((li,i)=> li.textContent = (parsed.improvements||[])[i] || '');
     [...el.fbContent.querySelectorAll('.fb-tips li')].forEach((li,i)=> li.textContent = (parsed.tips||[])[i] || '');
     el.fbContent.querySelector('.fb-overall').textContent = parsed.overall || '';
+    [...el.fbContent.querySelectorAll('.fb-qa-q-text')].forEach((el2,i)=> el2.textContent = modelAnswers[i] ? modelAnswers[i].question || '' : '');
+    [...el.fbContent.querySelectorAll('.fb-qa-a-text')].forEach((el2,i)=> el2.textContent = modelAnswers[i] ? modelAnswers[i].modelAnswer || '' : '');
 
     appendResetActions();
   }
@@ -1240,6 +1275,11 @@
       out += '\n\n보완할 점:\n' + (state.feedback.improvements||[]).map(s=>'- '+s).join('\n');
       out += '\n\n종합 평가:\n' + (state.feedback.overall||'');
       out += '\n\n실전 팁:\n' + (state.feedback.tips||[]).map(s=>'- '+s).join('\n');
+      if(Array.isArray(state.feedback.modelAnswers) && state.feedback.modelAnswers.length){
+        out += '\n\n주요 질문 모범 답안:\n' + state.feedback.modelAnswers
+          .map(qa => `Q. ${qa.question||''}\nA. ${qa.modelAnswer||''}`)
+          .join('\n\n');
+      }
     }
     navigator.clipboard.writeText(out).then(()=>{
       const btn = document.getElementById('copyBtn');
