@@ -876,13 +876,26 @@
   /* ---------------- AI model call (via OpenRouter -> Google: Gemma 4 31B free) ---------------- */
   // Free models are sometimes busy/rate-limited by their underlying provider.
   // Listing several lets OpenRouter automatically try the next one on failure.
-  // Ordered with speed in mind: fast fallback second, the slowest model last.
+  // Gemma is listed twice on purpose: it has the strongest Korean output of
+  // the free options here, so a transient failure retries it once more
+  // before falling back to models with weaker Korean fluency.
   const OPENROUTER_MODELS = [
+    'google/gemma-4-31b-it:free',
     'google/gemma-4-31b-it:free',
     'nvidia/nemotron-nano-9b-v2:free',
     'openai/gpt-oss-20b:free'
   ];
-  async function callClaude(systemPrompt, messages){
+
+  // Crude heuristic: a proper Korean reply should have a healthy amount of
+  // Hangul. If a reply is mostly Latin letters, the model likely answered
+  // in English (or a broken mix) instead of Korean.
+  function looksNonKorean(text){
+    const hangul = (text.match(/[\uac00-\ud7a3]/g) || []).length;
+    const latin = (text.match(/[A-Za-z]/g) || []).length;
+    return hangul < 5 && latin > 15;
+  }
+
+  async function callModelOnce(systemPrompt, messages){
     const apiKey = getApiKey();
     if(!apiKey){
       throw new Error('OpenRouter API 키가 필요합니다. "자료 준비" 탭의 F번 항목에 키를 입력해 주세요. (openrouter.ai에서 무료로 발급받을 수 있습니다)');
@@ -931,11 +944,34 @@
     return content.trim();
   }
 
+  async function callClaude(systemPrompt, messages){
+    const first = await callModelOnce(systemPrompt, messages);
+    if(!looksNonKorean(first)) return first;
+
+    // The reply looked like English (or a broken mix) instead of Korean —
+    // retry once with an extra, very explicit reminder.
+    console.warn('Non-Korean-looking reply, retrying once:', first);
+    const reinforced = systemPrompt + '\n\n[다시 한번 강조] 방금 응답이 한국어가 아니었습니다. 이번에는 반드시 100% 자연스러운 한국어(존댓말)로만 다시 작성하십시오. 영어는 한 단어도 쓰지 마십시오.';
+    try{
+      return await callModelOnce(reinforced, messages);
+    } catch(retryErr){
+      // If the retry itself fails outright, surface the original reply
+      // rather than losing the turn entirely.
+      console.error('Korean-retry failed, falling back to original reply:', retryErr);
+      return first;
+    }
+  }
+
   function buildInterviewSystemPrompt(){
     const materials = state.materials.trim() || '(제공된 자료 없음 — 일반적인 회계법인 승진 심사 기준으로 진행)';
     const extra = state.extraContext.trim() ? `\n[추가 컨텍스트]\n${state.extraContext.trim()}\n` : '';
     return [
       '당신은 회계법인의 승진 심사위원회 역할을 맡아 실제 승진 인터뷰처럼 한국어 존댓말로 대화를 진행합니다.',
+      '',
+      '[언어 규칙 — 반드시 지킬 것]',
+      '- 모든 응답은 처음부터 끝까지 자연스럽고 매끄러운 한국어(존댓말)로만 작성하십시오.',
+      '- 영어 단어, 영어 문장, 로마자 표기를 섞지 마십시오. 회계·경영 용어도 이미 통용되는 한국어 표현(예: "리더십", "매출")으로 쓰고, 불가피하게 영문 약어를 쓸 때는 괄호 없이 한국어 문장 속에서 자연스럽게 사용하십시오.',
+      '- 어색하거나 번역체스러운 문장이 아니라, 실제 한국 회계법인 파트너가 말하듯 자연스러운 구어체 존댓말로 작성하십시오.',
       '',
       `[승진 심사 대상 직급]\n${state.targetRole}`,
       '',
@@ -1111,7 +1147,7 @@
     ].join('\n');
 
     try{
-      const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만 응답하십시오.', [
+      const raw = await callClaude('당신은 회계법인 승진 심사위원회를 대표해 후보자에게 건설적인 피드백을 작성하는 역할입니다. 반드시 요청된 JSON 형식으로만 응답하십시오. JSON의 모든 문자열 값은 자연스러운 한국어(존댓말)로만 작성하고, 영어 단어나 문장을 섞지 마십시오.', [
         { role:'user', content: feedbackPrompt }
       ]);
       renderFeedback(raw);
