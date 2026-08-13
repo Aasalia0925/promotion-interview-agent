@@ -400,6 +400,8 @@
     font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:.08em; text-transform:uppercase;
     color:var(--green-ok); display:block; margin-bottom:5px;
   }
+  .fb-qa-item.playing{ border-color:var(--brass); box-shadow:0 0 0 2px var(--brass-pale); }
+  .fb-qa-item-actions{ padding:8px 16px; border-top:1px solid var(--paper-line); background:var(--white); }
 
   .footnote{
     text-align:center; font-size:12px; color:var(--ink-soft); margin-top:22px; line-height:1.6;
@@ -426,7 +428,8 @@
   <nav class="tabs" role="tablist">
     <button class="tab active" id="tabBtn-setup" role="tab" aria-selected="true">01 자료 준비</button>
     <button class="tab" id="tabBtn-interview" role="tab" aria-selected="false" disabled>02 모의 면접</button>
-    <button class="tab" id="tabBtn-feedback" role="tab" aria-selected="false" disabled>03 피드백</button>
+    <button class="tab" id="tabBtn-study" role="tab" aria-selected="false">03 예시 학습</button>
+    <button class="tab" id="tabBtn-feedback" role="tab" aria-selected="false" disabled>04 피드백</button>
   </nav>
 
   <!-- ===== Panel 1: Setup ===== -->
@@ -541,7 +544,34 @@
     </div>
   </section>
 
-  <!-- ===== Panel 3: Feedback ===== -->
+  <!-- ===== Panel 3: Example Study (question + model answer, read aloud) ===== -->
+  <section class="panel" id="panel-study" hidden>
+    <p class="panel-intro">
+      직접 답변하지 않고, 예상 질문과 모범 답안을 눈으로 보거나 음성으로 들으며 미리 익힐 수 있는 학습용 메뉴입니다.
+      "01 자료 준비" 탭에서 입력한 직급·자료를 그대로 사용합니다.
+    </p>
+    <div class="interview-toolbar">
+      <div class="meta-chips" id="studyMetaChips"></div>
+      <button class="btn-secondary" id="studyGenerateBtn" type="button">예시 질문·답변 만들기</button>
+    </div>
+
+    <div id="studyEmpty" class="transcript-empty" style="padding:40px 10px;">
+      위 버튼을 누르면 대상 직급과 참고 자료를 바탕으로 예상 질문 6개와 모범 답안을 만들어 드립니다.
+    </div>
+    <div id="studyLoading" class="fb-loading" style="display:none;">
+      <div>예상 질문과 모범 답안을 준비하고 있습니다…</div>
+      <div class="typing-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div id="studyList" class="fb-qa" style="display:none; margin-top:6px;"></div>
+
+    <div class="controls" id="studyPlaybackControls" style="display:none; margin-top:18px; flex-wrap:wrap;">
+      <button class="btn-primary" id="studyPlayBtn" type="button">전체 듣기</button>
+      <button class="btn-secondary" id="studyStopBtn" type="button">정지</button>
+      <button class="btn-secondary" id="studyRegenBtn" type="button">새로 만들기</button>
+    </div>
+  </section>
+
+  <!-- ===== Panel 4: Feedback ===== -->
   <section class="panel" id="panel-feedback" hidden>
     <div id="fbLoading" class="fb-loading">
       <div>심사위원회가 평가를 정리하고 있습니다…</div>
@@ -572,7 +602,8 @@
     transcript: [],
     startTime: null,
     feedback: null,
-    lastFailedAnswer: null
+    lastFailedAnswer: null,
+    studyItems: []
   };
 
   const styleLabel = { pressure:'압박형', balanced:'균형형', coaching:'코칭형' };
@@ -592,8 +623,8 @@
   const $ = (id) => document.getElementById(id);
   const el = {
     caseNo: $('caseNo'), timer: $('timerDisplay'), statusBadge: $('statusBadge'), statusText: $('statusText'),
-    tabSetup: $('tabBtn-setup'), tabInterview: $('tabBtn-interview'), tabFeedback: $('tabBtn-feedback'),
-    panelSetup: $('panel-setup'), panelInterview: $('panel-interview'), panelFeedback: $('panel-feedback'),
+    tabSetup: $('tabBtn-setup'), tabInterview: $('tabBtn-interview'), tabStudy: $('tabBtn-study'), tabFeedback: $('tabBtn-feedback'),
+    panelSetup: $('panel-setup'), panelInterview: $('panel-interview'), panelStudy: $('panel-study'), panelFeedback: $('panel-feedback'),
     targetRole: $('targetRole'), targetRoleWarn: $('targetRoleWarn'),
     styleSelect: $('styleSelect'), panelSelect: $('panelSelect'),
     materials: $('materials'), fileBtn: $('fileBtn'), fileInput: $('fileInput'), fileName: $('fileName'), fileNote: $('fileNote'),
@@ -603,7 +634,11 @@
     transcript: $('transcript'), transcriptEmpty: $('transcriptEmpty'),
     micBtn: $('micBtn'), answerInput: $('answerInput'), sendBtn: $('sendBtn'), voiceNote: $('voiceNote'),
     endBtn: $('endBtn'),
-    fbLoading: $('fbLoading'), fbContent: $('fbContent')
+    fbLoading: $('fbLoading'), fbContent: $('fbContent'),
+    studyMetaChips: $('studyMetaChips'), studyGenerateBtn: $('studyGenerateBtn'),
+    studyEmpty: $('studyEmpty'), studyLoading: $('studyLoading'), studyList: $('studyList'),
+    studyPlaybackControls: $('studyPlaybackControls'), studyPlayBtn: $('studyPlayBtn'),
+    studyStopBtn: $('studyStopBtn'), studyRegenBtn: $('studyRegenBtn')
   };
 
   /* ---------------- Init header ---------------- */
@@ -617,7 +652,7 @@
   })();
 
   /* ---------------- Tabs ---------------- */
-  const unlocked = { setup:true, interview:false, feedback:false };
+  const unlocked = { setup:true, interview:false, study:true, feedback:false };
   function setPhase(phase){
     state.phase = phase;
     if(phase==='interview') unlocked.interview = true;
@@ -626,7 +661,7 @@
   }
   function goTab(name){
     if(!unlocked[name]) return;
-    [['setup', el.panelSetup, el.tabSetup], ['interview', el.panelInterview, el.tabInterview], ['feedback', el.panelFeedback, el.tabFeedback]]
+    [['setup', el.panelSetup, el.tabSetup], ['interview', el.panelInterview, el.tabInterview], ['study', el.panelStudy, el.tabStudy], ['feedback', el.panelFeedback, el.tabFeedback]]
       .forEach(([key, panel, tab])=>{
         const active = key===name;
         panel.hidden = !active;
@@ -636,6 +671,7 @@
   }
   el.tabSetup.addEventListener('click', ()=>goTab('setup'));
   el.tabInterview.addEventListener('click', ()=>goTab('interview'));
+  el.tabStudy.addEventListener('click', ()=>goTab('study'));
   el.tabFeedback.addEventListener('click', ()=>goTab('feedback'));
 
   function render(){
@@ -1048,17 +1084,25 @@
   function hideTyping(){ if(typingRow){ typingRow.remove(); typingRow = null; } }
 
   /* ---------------- Flow: start / send / end ---------------- */
-  async function startInterview(){
+  // Validates the target-role field and syncs the setup form into state.
+  // Shared by "면접 시작" and the example-study tab, since both need the
+  // same target role / materials / context without requiring a full interview.
+  function syncSetupFromForm(){
     const role = el.targetRole.value.trim();
     if(!role){
       el.targetRoleWarn.style.display = 'block';
       el.targetRole.focus();
-      return;
+      return false;
     }
     el.targetRoleWarn.style.display = 'none';
     state.targetRole = role;
     state.materials = el.materials.value;
     state.extraContext = el.extraContext.value;
+    return true;
+  }
+
+  async function startInterview(){
+    if(!syncSetupFromForm()) return;
 
     el.startBtn.disabled = true;
     el.startBtn.textContent = '면접 준비 중…';
@@ -1321,6 +1365,163 @@
       if(btn){ const orig = btn.textContent; btn.textContent = '복사되었습니다'; setTimeout(()=>btn.textContent=orig, 1800); }
     }).catch(()=>{ alert('클립보드 복사에 실패했습니다.'); });
   }
+
+  /* ---------------- Example Study tab: question + model answer, read aloud ---------------- */
+  let studyPlaying = false;
+
+  function renderStudyMetaChips(){
+    el.studyMetaChips.innerHTML = '';
+    [state.targetRole || '직급 미설정', styleLabel[state.style]].forEach(t=>{
+      const c = document.createElement('span');
+      c.className = 'chip';
+      c.textContent = t;
+      el.studyMetaChips.appendChild(c);
+    });
+  }
+
+  async function generateStudyItems(){
+    stopStudyPlayback();
+    if(!syncSetupFromForm()){
+      goTab('setup');
+      return;
+    }
+    renderStudyMetaChips();
+
+    el.studyEmpty.style.display = 'none';
+    el.studyList.style.display = 'none';
+    el.studyPlaybackControls.style.display = 'none';
+    el.studyLoading.style.display = 'block';
+    el.studyGenerateBtn.disabled = true;
+
+    const materials = state.materials.trim() || '(제공된 자료 없음 — 일반적인 회계법인 승진 심사 기준으로 진행)';
+    const prompt = [
+      '아래 조건에 맞는 회계법인 승진 인터뷰 예상 질문과 모범 답안 예시를 만들어 주세요.',
+      '',
+      `[승진 심사 대상 직급]\n${state.targetRole}`,
+      '',
+      `[참고 자료]\n${materials}`,
+      '',
+      '리더십, 클라이언트 관리, 매출 기여, 팀 빌딩/멘토링, 위기 대응, 전문성, 향후 비전 등 실제 회계법인 승진 인터뷰에서 다뤄지는 주제를 폭넓게 다루는, 서로 다른 예상 질문 6개를 만드세요.',
+      '각 질문에는 참고 자료의 구체적인 내용(프로젝트명, 실적 등)을 최대한 반영한 모범 답안 예시(3~5문장, 자연스러운 한국어 구어체 존댓말)를 함께 작성하세요.',
+      '',
+      '중요: 반드시 하나의 완전한 JSON 객체만 출력하고, 앞뒤에 설명이나 코드블록 표시(```)를 붙이지 마십시오. 아래 형식 그대로 키 이름을 지켜서 응답하세요:',
+      '{"items":[{"question":"...","modelAnswer":"..."}]}'
+    ].join('\n');
+
+    try{
+      const raw = await callClaude('당신은 회계법인 승진 심사 전문가입니다. 반드시 요청된 JSON 형식으로만, 다른 텍스트나 코드블록 표시 없이 응답하십시오. 모든 문자열 값은 자연스러운 한국어(존댓말)로만 작성하고 영어를 섞지 마십시오.', [
+        { role:'user', content: prompt }
+      ], 3200);
+
+      let parsed = null;
+      try{ parsed = JSON.parse(raw.replace(/```json/gi,'').replace(/```/g,'').trim()); }
+      catch(e){
+        const extracted = extractJsonObject(raw);
+        if(extracted){ try{ parsed = JSON.parse(extracted); } catch(e2){ parsed = null; } }
+      }
+      if(!parsed || !Array.isArray(parsed.items) || !parsed.items.length){
+        throw new Error('응답 형식을 읽지 못했습니다. "새로 만들기"로 다시 시도해 주세요.');
+      }
+
+      state.studyItems = parsed.items;
+      el.studyLoading.style.display = 'none';
+      el.studyList.style.display = 'flex';
+      el.studyPlaybackControls.style.display = 'flex';
+      renderStudyItems();
+    } catch(err){
+      el.studyLoading.style.display = 'none';
+      el.studyEmpty.style.display = 'block';
+      el.studyEmpty.textContent = '예시를 만들지 못했습니다: ' + err.message;
+    } finally {
+      el.studyGenerateBtn.disabled = false;
+    }
+  }
+
+  function renderStudyItems(){
+    el.studyList.innerHTML = state.studyItems.map((item, i) => `
+      <div class="fb-qa-item" data-idx="${i}">
+        <div class="fb-qa-q"><span class="fb-qa-label">질문 ${i+1}</span><span class="fb-qa-q-text"></span></div>
+        <div class="fb-qa-a"><span class="fb-qa-label">모범 답안 예시</span><span class="fb-qa-a-text"></span></div>
+        <div class="fb-qa-item-actions">
+          <button class="btn-ghost study-item-play" type="button" data-idx="${i}">이 문항만 듣기</button>
+        </div>
+      </div>
+    `).join('');
+    // fill text content safely (avoid HTML injection from API output)
+    [...el.studyList.querySelectorAll('.fb-qa-q-text')].forEach((node,i)=> node.textContent = state.studyItems[i].question || '');
+    [...el.studyList.querySelectorAll('.fb-qa-a-text')].forEach((node,i)=> node.textContent = state.studyItems[i].modelAnswer || '');
+    [...el.studyList.querySelectorAll('.study-item-play')].forEach(btn=>{
+      btn.addEventListener('click', ()=> playStudyOne(parseInt(btn.dataset.idx, 10)));
+    });
+  }
+
+  function speakAsync(text){
+    return new Promise((resolve)=>{
+      if(!('speechSynthesis' in window)){ resolve(); return; }
+      try{
+        const utter = new SpeechSynthesisUtterance(text);
+        utter.lang = 'ko-KR';
+        const voices = window.speechSynthesis.getVoices();
+        const krVoice = voices.find(v=>v.lang && v.lang.toLowerCase().startsWith('ko'));
+        if(krVoice) utter.voice = krVoice;
+        utter.onend = resolve;
+        utter.onerror = resolve;
+        window.speechSynthesis.speak(utter);
+      } catch(err){ resolve(); }
+    });
+  }
+
+  function highlightStudyCard(i){
+    [...el.studyList.querySelectorAll('.fb-qa-item')].forEach((card)=>{
+      card.classList.toggle('playing', parseInt(card.dataset.idx,10) === i);
+    });
+    const card = el.studyList.querySelector(`.fb-qa-item[data-idx="${i}"]`);
+    if(card) card.scrollIntoView({ behavior:'smooth', block:'nearest' });
+  }
+  function clearStudyHighlight(){
+    [...el.studyList.querySelectorAll('.fb-qa-item')].forEach(card => card.classList.remove('playing'));
+  }
+
+  async function playStudyAll(){
+    if(studyPlaying || !state.studyItems.length) return;
+    studyPlaying = true;
+    el.studyPlayBtn.textContent = '재생 중…';
+    el.studyPlayBtn.disabled = true;
+    for(let i=0; i<state.studyItems.length; i++){
+      if(!studyPlaying) break;
+      highlightStudyCard(i);
+      await speakAsync('질문. ' + state.studyItems[i].question);
+      if(!studyPlaying) break;
+      await speakAsync('모범 답안. ' + state.studyItems[i].modelAnswer);
+    }
+    studyPlaying = false;
+    el.studyPlayBtn.textContent = '전체 듣기';
+    el.studyPlayBtn.disabled = false;
+    clearStudyHighlight();
+  }
+
+  function stopStudyPlayback(){
+    studyPlaying = false;
+    if('speechSynthesis' in window) window.speechSynthesis.cancel();
+    el.studyPlayBtn.textContent = '전체 듣기';
+    el.studyPlayBtn.disabled = false;
+    clearStudyHighlight();
+  }
+
+  async function playStudyOne(i){
+    stopStudyPlayback();
+    studyPlaying = true;
+    highlightStudyCard(i);
+    await speakAsync('질문. ' + state.studyItems[i].question);
+    if(studyPlaying) await speakAsync('모범 답안. ' + state.studyItems[i].modelAnswer);
+    studyPlaying = false;
+    clearStudyHighlight();
+  }
+
+  el.studyGenerateBtn.addEventListener('click', generateStudyItems);
+  el.studyRegenBtn.addEventListener('click', generateStudyItems);
+  el.studyPlayBtn.addEventListener('click', playStudyAll);
+  el.studyStopBtn.addEventListener('click', stopStudyPlayback);
 
   /* ---------------- Boot ---------------- */
   render();
